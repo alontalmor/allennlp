@@ -48,7 +48,7 @@ def parse_filename(filename):
 
 def process_results(args):
     # for BERTlarge we process a precdiction file ...
-    if args.predictions_file is not None:
+    if False and args.predictions_file is not None:
         instance_list = []
         with open(args.predictions_file, 'r') as f:
             for line in f:
@@ -107,9 +107,6 @@ def process_results(args):
             #print(set(all_question_ids) - set(predictions_question_ids))
             results_dict['qids_missing_frac'] = len(set(all_question_ids) - set(predictions_question_ids)) / len(set(all_question_ids))
 
-
-
-
     else:
         # computing
         with open(args.eval_res_file, 'r') as f:
@@ -122,11 +119,11 @@ def process_results(args):
     if args.predictions_file is not None:
         if args.eval_path is not None:
             # uploading to cloud
-            command = "aws s3 cp " + args.predictions_file + " s3://mrqa/predictions/" + args.predictions_file.split('/')[-1] + " --acl public-read"
+            command = "aws s3 cp " + args.predictions_file + " s3://olmpics/predictions/" + args.predictions_file.split('/')[-1] + " --acl public-read"
             Popen(command, shell=True, preexec_fn=os.setsid)
         else:
             # uploading to cloud
-            command = "aws s3 cp " + args.predictions_file + " s3://multiqa/predictions/" + args.predictions_file.split('/')[-1] + " --acl public-read"
+            command = "aws s3 cp " + args.predictions_file + " s3://olmpics/predictions/" + args.predictions_file.split('/')[-1] + " --acl public-read"
             Popen(command, shell=True, preexec_fn=os.setsid)
 
 def main():
