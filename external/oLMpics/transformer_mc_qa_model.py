@@ -58,7 +58,7 @@ class TransformerMCQAModel(Model):
         else:
             assert (ValueError)
 
-        if True or probe_type == 'MLP':
+        if probe_type == 'MLP':
             layer_freeze_regexes = ["embeddings", "encoder"]
 
         ## TODO ask oyvind about this code ...
