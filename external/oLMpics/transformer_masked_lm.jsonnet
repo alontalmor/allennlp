@@ -2,7 +2,8 @@ local train_size = 200;
 local batch_size = 8;
 local gradient_accumulation_batch_size = 2;
 local num_epochs = 4;
-local learning_rate = 5e-5;
+#local learning_rate = 5e-5;
+local learning_rate = 0.0;
 local weight_decay = 0.1;
 local warmup_ratio = 0.06;
 local transformer_model = "roberta-base";
@@ -59,7 +60,7 @@ local cuda_device = 0;
     "validation_metric": "+EM",
     "num_serialized_models_to_keep": 1,
     "should_log_learning_rate": true,
-    "gradient_accumulation_steps": gradient_accumulation_batch_size,
+    "num_gradient_accumulation_steps": gradient_accumulation_batch_size,
     // "grad_clipping": 1.0,
     "num_epochs": num_epochs,
     "cuda_device": cuda_device

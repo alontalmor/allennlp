@@ -59,7 +59,7 @@ local cuda_device = 0;
     "validation_metric": "+EM",
     "num_serialized_models_to_keep": 1,
     "should_log_learning_rate": true,
-    "gradient_accumulation_steps": gradient_accumulation_batch_size,
+    "num_gradient_accumulation_steps": gradient_accumulation_batch_size,
     // "grad_clipping": 1.0,
     "num_epochs": num_epochs,
     "cuda_device": cuda_device

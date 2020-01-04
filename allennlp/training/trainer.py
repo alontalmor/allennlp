@@ -212,7 +212,6 @@ class Trainer(TrainerBase):
         self.optimizer = optimizer
         self.train_data = train_dataset
         self._validation_data = validation_dataset
-        self._gradient_accumulation_steps = gradient_accumulation_steps
         self._save_best_model = save_best_model
 
         if patience is None:  # no early stopping
@@ -380,7 +379,7 @@ class Trainer(TrainerBase):
                 self.optimizer.zero_grad()
 
             for batch in batch_group:
-                loss = self.batch_loss(batch, for_training=True)
+                loss,  _o = self.batch_loss(batch, for_training=True)
                 if torch.isnan(loss):
                     raise ValueError("nan loss encountered")
                 loss = loss / len(batch_group)
@@ -391,12 +390,10 @@ class Trainer(TrainerBase):
 
             # This does nothing if batch_num_total is None or you are using a
             # scheduler which doesn't update per batch.
-            # TODO Alon changing the trainer following this post https://github.com/allenai/allennlp/issues/2112
-            if batch_num_total % self._gradient_accumulation_steps == 0:
-                if self._learning_rate_scheduler:
-                    self._learning_rate_scheduler.step_batch(batch_num_total)
-                if self._momentum_scheduler:
-                    self._momentum_scheduler.step_batch(batch_num_total)
+            if self._learning_rate_scheduler:
+                self._learning_rate_scheduler.step_batch(batch_num_total)
+            if self._momentum_scheduler:
+                self._momentum_scheduler.step_batch(batch_num_total)
 
             if self._tensorboard.should_log_histograms_this_batch() and self._master:
                 # get the magnitude of parameter updates for logging
@@ -415,10 +412,7 @@ class Trainer(TrainerBase):
                         "gradient_update/" + name, update_norm / (param_norm + 1e-7)
                     )
             else:
-                # TODO Alon changing the trainer following this post https://github.com/allenai/allennlp/issues/2112
-                if batch_num_total % self._gradient_accumulation_steps == 0:
-                    self.optimizer.step()
-                    self.optimizer.zero_grad()
+                self.optimizer.step()
 
             # Update moving averages
             if self._moving_average is not None:
@@ -437,7 +431,7 @@ class Trainer(TrainerBase):
             # Training logs are saved in training and validation under the training final results
             elastic_metrics = metrics.copy()
             elastic_train_metrics = {'epoch_metrics/'+key:elastic_metrics[key] for key in elastic_metrics}
-            elastic_train_metrics.update({'batch_num_total': batch_num_total, 'gpu': self._cuda_devices[0]})
+            elastic_train_metrics.update({'batch_num_total': batch_num_total, 'gpu': self.cuda_device})
             elastic_train_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
             elastic_train_metrics.pop('optimizer', None)
             elastic_train_metrics.pop('schedule', None)
@@ -521,7 +515,7 @@ class Trainer(TrainerBase):
         multiqa_res = {}
         for batch in val_generator_tqdm:
 
-            loss = self.batch_loss(batch, for_training=False)
+            loss, _o = self.batch_loss(batch, for_training=False)
             if loss is not None:
                 # You shouldn't necessarily have to compute a loss for validation, so we allow for
                 # `loss` to be None.  We need to be careful, though - `batches_this_epoch` is
@@ -647,7 +641,7 @@ class Trainer(TrainerBase):
             # Training logs are saved in training and validation under the training final results
             elastic_val_metrics = val_metrics.copy()
             elastic_val_metrics = {'validation/' + k: v for k, v in elastic_val_metrics.items()}
-            elastic_val_metrics.update({'epoch': epoch, 'gpu': self._cuda_devices[0]})
+            elastic_val_metrics.update({'epoch': epoch, 'gpu': self.cuda_device})
             elastic_val_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
             elastic_val_metrics.update(
                 {'optimizer': str(type(self.optimizer)), 'serialization_dir': self._serialization_dir, \
@@ -950,7 +944,7 @@ class Trainer(TrainerBase):
             should_log_learning_rate=should_log_learning_rate,
             log_batch_size_period=log_batch_size_period,
             moving_average=moving_average,
-            gradient_accumulation_steps=num_gradient_accumulation_steps,
+            num_gradient_accumulation_steps=num_gradient_accumulation_steps,
             save_best_model=save_best_model,
             distributed=distributed,
             rank=local_rank,

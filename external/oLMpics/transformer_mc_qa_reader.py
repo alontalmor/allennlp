@@ -59,12 +59,9 @@ class TransformerMCQAReader(DatasetReader):
         if do_lowercase is None:
             do_lowercase = '-uncased' in pretrained_model
 
-        self._tokenizer = PretrainedTransformerTokenizer(pretrained_model,
-                                                         do_lowercase=do_lowercase,
-                                                         start_tokens = [],
-                                                         end_tokens = [])
+        self._tokenizer = PretrainedTransformerTokenizer(pretrained_model)
         self._tokenizer_internal = self._tokenizer._tokenizer
-        token_indexer = PretrainedTransformerIndexer(pretrained_model, do_lowercase=do_lowercase)
+        token_indexer = PretrainedTransformerIndexer(pretrained_model)
         self._token_indexers = {'tokens': token_indexer}
 
         self._max_pieces = max_pieces
@@ -577,65 +574,19 @@ class TransformerMCQAReader(DatasetReader):
         return None
 
     def transformer_features_from_qa(self, question: str, answer: str, context: str = None):
-        cls_token = Token(self._tokenizer_internal.cls_token)
-        sep_token = Token(self._tokenizer_internal.sep_token)
-        #pad_token = self._tokenizer_internal.pad_token
-        sep_token_extra = bool(self._model_type in ['roberta'])
-        cls_token_at_end = bool(self._model_type in ['xlnet'])
-        cls_token_segment_id = 2 if self._model_type in ['xlnet'] else 0
-        #pad_on_left = bool(self._model_type in ['xlnet'])
-        #pad_token_segment_id = 4 if self._model_type in ['xlnet'] else 0
-        #pad_token_val=self._tokenizer.encoder[pad_token] if self._model_type in ['roberta'] else self._tokenizer.vocab[pad_token]
         question = self._add_prefix.get("q", "") + question
         answer = self._add_prefix.get("a",  "") + answer
 
         # Alon changing mask type:
         if self._model_type in ['roberta','xlnet']:
             question = question.replace('[MASK]','<mask>')
+        elif self._model_type in ['albert']:
+            question = question.replace('[MASK]', '[MASK]>')
 
-        question_tokens = self._tokenizer.tokenize(question)
-        if context is not None:
-            context = self._add_prefix.get("c", "") + context
-            context_tokens = self._tokenizer.tokenize(context)
-        else:
-            context_tokens = []
+        tokens = self._tokenizer.tokenize_sentence_pair(question, answer)
 
-        seps = self._context_syntax.count("#")
-        sep_mult = 2 if sep_token_extra else 1
-        max_tokens = self._max_pieces - seps * sep_mult - 1
-
-        choice_tokens = self._tokenizer.tokenize(answer)
-
-        context_tokens, question_tokens, choice_tokens = self._truncate_tokens(context_tokens,
-                                                                               question_tokens,
-                                                                               choice_tokens,
-                                                                               max_tokens)
-        tokens = []
-        segment_ids = []
-        current_segment = 0
-        token_dict = {"q": question_tokens, "c": context_tokens, "a": choice_tokens}
-        for c in self._context_syntax:
-            if c in "qca":
-                new_tokens = token_dict[c]
-                tokens += new_tokens
-                segment_ids += len(new_tokens) * [current_segment]
-            elif c == "#":
-                tokens += sep_mult * [sep_token]
-                segment_ids += sep_mult * [current_segment]
-            elif c == "!":
-                tokens += [sep_token]
-                segment_ids += [current_segment]
-            elif c == "_":
-                current_segment += 1
-            else:
-                raise ValueError(f"Unknown context_syntax character {c} in {self._context_syntax}")
-
-        if cls_token_at_end:
-            tokens += [cls_token]
-            segment_ids += [cls_token_segment_id]
-        else:
-            tokens = [cls_token] + tokens
-            segment_ids = [cls_token_segment_id] + segment_ids
+        # TODO make sure the segments IDs do not contribute
+        segment_ids = [0] * len(tokens)
 
         return tokens, segment_ids
 

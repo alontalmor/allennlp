@@ -47,12 +47,10 @@ word2number>=1.1
 
 # To use the BERT model
 pytorch-pretrained-bert>=0.6.0
-<<<<<<< HEAD
-pytorch-transformers==1.2.0
-=======
-transformers>=2.1.1,!=2.2.1
+#transformers>=2.1.1,!=2.2.1
+transformers>=2.3.0
 # Version 2.2.1 has a broken tokenizer.
->>>>>>> upstream/master
+
 
 # For caching processed data
 jsonpickle

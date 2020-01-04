@@ -59,12 +59,10 @@ class TransformerMaskedLMReader(DatasetReader):
         if do_lowercase is None:
             do_lowercase = '-uncased' in pretrained_model
 
-        self._tokenizer = PretrainedTransformerTokenizer(pretrained_model,
-                                                         do_lowercase=do_lowercase,
-                                                         start_tokens = [],
-                                                         end_tokens = [])
+        self._tokenizer = PretrainedTransformerTokenizer(pretrained_model)
+        self._tokenizer_no_special_tokens = PretrainedTransformerTokenizer(pretrained_model,add_special_tokens=False)
         self._tokenizer_internal = self._tokenizer._tokenizer
-        token_indexer = PretrainedTransformerIndexer(pretrained_model, do_lowercase=do_lowercase)
+        token_indexer = PretrainedTransformerIndexer(pretrained_model)
         self._token_indexers = {'tokens': token_indexer}
 
         self._max_pieces = max_pieces
@@ -592,6 +590,9 @@ class TransformerMaskedLMReader(DatasetReader):
         # Alon changing mask type:
         if self._model_type in ['roberta','xlnet']:
             question = question.replace('[MASK]','<mask>')
+        elif self._model_type in ['albert']:
+            question = question.replace('[MASK]', '[MASK]>')
+
 
         question_tokens = self._tokenizer.tokenize(question)
         if context is not None:
@@ -604,8 +605,12 @@ class TransformerMaskedLMReader(DatasetReader):
         sep_mult = 2 if sep_token_extra else 1
         max_tokens = self._max_pieces - seps * sep_mult - 1
 
-        choice_tokens = self._tokenizer.tokenize(answer)
-        choice_ids = self._tokenizer._tokenizer.encode(answer)
+
+        choice_tokens = [answer]
+        choice_ids = self._tokenizer_no_special_tokens._tokenizer.encode('a ' + answer, add_special_tokens=False)[1:]
+
+        if len(choice_ids) > 1:
+            logger.error('more than one word-piece answer!')
 
         context_tokens, question_tokens, choice_tokens = self._truncate_tokens(context_tokens,
                                                                                question_tokens,
@@ -617,10 +622,7 @@ class TransformerMaskedLMReader(DatasetReader):
         segment_ids = []
         current_segment = 0
         # Alon, if the question is empty don't add seprators.
-        if self._model_type in ['roberta', 'xlnet']:
-            masked_tokens = [(i, t) for i, t in enumerate(question_tokens) if t == self._tokenizer.tokenize('<mask>')[0]]
-        else:
-            masked_tokens = [(i, t) for i, t in enumerate(question_tokens) if t == self._tokenizer.tokenize('[MASK]')[0]]
+        masked_tokens = [(i, t) for i, t in enumerate(question_tokens) if t.text == self._tokenizer._tokenizer.mask_token]
 
         if len(masked_tokens) > 0:
             tokens += question_tokens
@@ -646,23 +648,22 @@ class TransformerMaskedLMReader(DatasetReader):
                 else:
                     raise ValueError(f"Unknown context_syntax character {c} in {self._context_syntax}")
 
-        if cls_token_at_end:
-            tokens += [cls_token]
-            segment_ids += [cls_token_segment_id]
-        else:
-            tokens = [cls_token] + tokens
-            segment_ids = [cls_token_segment_id] + segment_ids
+        #if cls_token_at_end:
+        #    tokens += [cls_token]
+        #    segment_ids += [cls_token_segment_id]
+        #else:
+        #    tokens = [cls_token] + tokens
+        #    segment_ids = [cls_token_segment_id] + segment_ids
 
-            if self._model_type in ['roberta']:
-                tokens += [Token(self._tokenizer_internal.eos_token)]
-                segment_ids.append(0)
+        #if self._model_type in ['roberta']:
+        #    tokens += [Token(self._tokenizer_internal.eos_token)]
+        #    segment_ids.append(0)
 
         masked_labels = [-1] * len(tokens)
         masked_index_ids = []
         for i,t in enumerate(masked_tokens):
-            # remember we added a CLS so the masked token is actually t[0] + 1
-            masked_labels[t[0] + 1] = choice_ids[i]
-            masked_index_ids.append((t[0] + 1, choice_ids[i]))
+            masked_labels[t[0]] = choice_ids[i]
+            masked_index_ids.append((t[0], choice_ids[i]))
 
         return tokens, segment_ids, masked_labels, masked_index_ids
 

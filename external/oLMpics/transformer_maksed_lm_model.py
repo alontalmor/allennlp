@@ -2,12 +2,14 @@ from typing import Dict, Optional, List, Any
 
 import logging
 from overrides import overrides
-from pytorch_transformers.modeling_roberta import RobertaClassificationHead, RobertaConfig, RobertaForMaskedLM
-from pytorch_transformers.modeling_xlnet import XLNetConfig, XLNetLMHeadModel
-from pytorch_transformers.modeling_bert import BertConfig, BertForMaskedLM
-from pytorch_transformers.modeling_utils import SequenceSummary
-from pytorch_transformers.tokenization_gpt2 import bytes_to_unicode
-import re
+from transformers.modeling_roberta import RobertaClassificationHead, RobertaConfig, RobertaForMaskedLM
+from transformers.modeling_xlnet import XLNetConfig, XLNetLMHeadModel
+from transformers.modeling_bert import BertConfig, BertForMaskedLM
+from transformers.modeling_albert import AlbertConfig, AlbertForMaskedLM
+#from transformers.modeling_utils import SequenceSummary
+#from transformers.tokenization_gpt2 import bytes_to_unicode
+import re, json, os
+import numpy as np
 import torch
 from torch.nn.modules.linear import Linear
 from torch.nn.functional import binary_cross_entropy_with_logits
@@ -72,7 +74,6 @@ class RobertaForMultiChoiceMaskedLM(RobertaForMaskedLM):
 @Model.register("transformer_masked_lm")
 class TransformerMaskedLMModel(Model):
     """
-
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -83,6 +84,7 @@ class TransformerMaskedLMModel(Model):
                  transformer_weights_model: str = None,
                  reset_classifier: bool = False,
                  per_choice_loss: bool = False,
+                 predictions_file=None,
                  layer_freeze_regexes: List[str] = None,
                  probe_type: str = None,
                  mc_strategy: str = None,
@@ -92,6 +94,12 @@ class TransformerMaskedLMModel(Model):
         super().__init__(vocab, regularizer)
 
         self._loss_on_all_vocab = loss_on_all_vocab
+
+        self._predictions_file = predictions_file
+
+        # TODO move to predict
+        if predictions_file is not None and os.path.isfile(predictions_file):
+            os.remove(predictions_file)
 
         self._pretrained_model = pretrained_model
         if 'roberta' in pretrained_model:
@@ -103,6 +111,12 @@ class TransformerMaskedLMModel(Model):
         elif 'xlnet' in pretrained_model:
             self._padding_value = 5  # The index of the XLNet padding token
             self._transformer_model = XLNetLMHeadModel.from_pretrained(pretrained_model)
+        elif 'albert' in pretrained_model:
+            if loss_on_all_vocab:
+                self._transformer_model = AlbertForMaskedLM.from_pretrained(pretrained_model)
+            else:
+                self._transformer_model = BertForMultiChoiceMaskedLM.from_pretrained(pretrained_model)
+            self._padding_value = 0  # The index of the BERT padding token
         elif 'bert' in pretrained_model:
             if loss_on_all_vocab:
                 self._transformer_model = BertForMaskedLM.from_pretrained(pretrained_model)
@@ -148,6 +162,8 @@ class TransformerMaskedLMModel(Model):
         if 'roberta' in pretrained_model:
             self._transformer_model.lm_head.decoder.weight.requires_grad = True
             self._transformer_model.lm_head.bias.requires_grad = True
+        elif 'albert' in pretrained_model:
+            pass
         elif 'bert' in pretrained_model:
             self._transformer_model.cls.predictions.decoder.weight.requires_grad = True
             self._transformer_model.cls.predictions.bias.requires_grad = True
@@ -200,8 +216,23 @@ class TransformerMaskedLMModel(Model):
                 for t in choice:
                     label_logits[e,c] +=  predictions[e,t[0],t[1]]
 
+            # TODO this is shortcut to get predictions fast..
+            if self._predictions_file is not None and not self.training:
+                with open(self._predictions_file, 'a') as f:
+                    logits = label_logits[e,:].cpu().data.numpy().astype(float)
+                    pred_ind = np.argmax(logits)
+                    f.write(json.dumps({'question_id': example['id'], \
+                                        'phrase': example['question_text' ], \
+                                        'choices': example['choice_text_list'] , \
+                                        'logits': list(logits),
+                                        'answer_ind': example['correct_answer_index'],
+                                        'prediction': example['choice_text_list'][pred_ind],
+                                        'is_correct': (example['correct_answer_index'] == pred_ind) * 1.0}) + '\n')
+
         self._accuracy(label_logits, label)
         output_dict["loss"] = loss
+
+
 
         #if not (label_logits.numpy().argmax() == label.numpy())[0]:
         #    logging.info("%s answer: %s" % (metadata[0]['question_text'], metadata[0]['choice_text_list'][metadata[0]['correct_answer_index']]))
@@ -231,5 +262,3 @@ class TransformerMaskedLMModel(Model):
                              weights_file=weights_file,
                              cuda_device=cuda_device,
                              **kwargs)
-
-
