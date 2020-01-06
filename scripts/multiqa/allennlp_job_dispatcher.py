@@ -229,7 +229,12 @@ class AllenNLP_Job_Dispatcher():
     def replace_one_field_tags(self, value, params):
         if type(value) == str:
             for key in params.keys():
-                if type(params[key]) == str:
+                if type(value) != str:
+                    continue
+
+                if '[' + key + ']' == value:
+                    value = params[key]
+                elif type(params[key]) == str:
                     value = value.replace('[' + key + ']', str(params[key]))
                 else:
                     value = value.replace(r"'[" + key + "]'", str(params[key]))
@@ -509,12 +514,12 @@ class AllenNLP_Job_Dispatcher():
                     self.replace_one_field_tags(exp_config['override_config']['iterator']['batch_size'], params)
                 exp_config['override_config']['trainer']['num_epochs'] = \
                     self.replace_one_field_tags(exp_config['override_config']['trainer']['num_epochs'], params)
-                exp_config['override_config']['trainer']['gradient_accumulation_steps'] = \
-                    self.replace_one_field_tags(exp_config['override_config']['trainer']['gradient_accumulation_steps'], params)
+                exp_config['override_config']['trainer']['num_gradient_accumulation_steps'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['trainer']['num_gradient_accumulation_steps'], params)
                 exp_config['override_config']['trainer']['optimizer']['t_total'] = \
                     int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['iterator']['batch_size']) \
                         * float(exp_config['override_config']['trainer']['num_epochs']) \
-                        / float(exp_config['override_config']['trainer']['gradient_accumulation_steps']))
+                        / float(exp_config['override_config']['trainer']['num_gradient_accumulation_steps']))
 
                 if exp_config['override_config']['trainer']['cuda_device'] == '[GPU_ID4]':
                     exp_config['override_config']['trainer']['optimizer']['t_total'] /= 4
@@ -525,11 +530,11 @@ class AllenNLP_Job_Dispatcher():
                     self.replace_one_field_tags(exp_config['override_config']['iterator']['batch_size'], params)
                 exp_config['override_config']['trainer']['num_epochs'] = \
                     self.replace_one_field_tags(exp_config['override_config']['trainer']['num_epochs'], params)
-                exp_config['override_config']['trainer']['gradient_accumulation_steps'] = \
-                    self.replace_one_field_tags(exp_config['override_config']['trainer']['gradient_accumulation_steps'], params)
+                exp_config['override_config']['trainer']['num_gradient_accumulation_steps'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['trainer']['num_gradient_accumulation_steps'], params)
                 exp_config['override_config']['trainer']['learning_rate_scheduler']['num_steps_per_epoch'] = \
                     int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['iterator']['batch_size']) \
-                        / float(exp_config['override_config']['trainer']['gradient_accumulation_steps']))
+                        / float(exp_config['override_config']['trainer']['num_gradient_accumulation_steps']))
 
                 if exp_config['override_config']['trainer']['cuda_device'] == '[GPU_ID4]':
                     exp_config['override_config']['trainer']['learning_rate_scheduler']['num_steps_per_epoch'] /= 4
