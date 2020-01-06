@@ -32,9 +32,6 @@ local cuda_device = 0;
   "validation_data_path": "s3://olmpics/challenge/commonsense_knowledge_dev.jsonl.gz",
 
   "model": {
-    //"requires_grad":false,
-    //"unfreeze_pooler":true,
-    "layer_freeze_regexes":["embeddings","encoder"],
     "type": "transformer_mc_qa",
     "pretrained_model": transformer_model
   },
@@ -59,7 +56,7 @@ local cuda_device = 0;
     "validation_metric": "+EM",
     "num_serialized_models_to_keep": 1,
     "should_log_learning_rate": true,
-    "num_gradient_accumulation_steps": gradient_accumulation_batch_size,
+    "gradient_accumulation_steps": gradient_accumulation_batch_size,
     // "grad_clipping": 1.0,
     "num_epochs": num_epochs,
     "cuda_device": cuda_device
