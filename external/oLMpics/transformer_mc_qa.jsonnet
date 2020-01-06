@@ -32,9 +32,6 @@ local cuda_device = 0;
   "validation_data_path": "s3://olmpics/challenge/commonsense_knowledge_dev.jsonl.gz",
 
   "model": {
-    //"requires_grad":false,
-    //"unfreeze_pooler":true,
-    "layer_freeze_regexes":["embeddings","encoder"],
     "type": "transformer_mc_qa",
     "pretrained_model": transformer_model
   },

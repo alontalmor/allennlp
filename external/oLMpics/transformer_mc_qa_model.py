@@ -2,11 +2,12 @@ from typing import Dict, Optional, List, Any
 
 import logging
 from overrides import overrides
-from pytorch_transformers.modeling_roberta import RobertaClassificationHead, RobertaConfig, RobertaModel
-from pytorch_transformers.modeling_xlnet import XLNetConfig, XLNetModel
-from pytorch_transformers.modeling_bert import BertConfig, BertModel
-from pytorch_transformers.modeling_utils import SequenceSummary
-from pytorch_transformers.tokenization_gpt2 import bytes_to_unicode
+from transformers.modeling_roberta import RobertaClassificationHead, RobertaConfig, RobertaModel
+from transformers.modeling_xlnet import XLNetConfig, XLNetModel
+from transformers.modeling_bert import BertConfig, BertModel
+from transformers.modeling_albert import AlbertConfig, AlbertModel
+from transformers.modeling_utils import SequenceSummary
+from transformers.tokenization_gpt2 import bytes_to_unicode
 import re
 import torch
 from torch.nn.modules.linear import Linear
@@ -51,6 +52,10 @@ class TransformerMCQAModel(Model):
             self._padding_value = 5  # The index of the XLNet padding token
             self._transformer_model = XLNetModel.from_pretrained(pretrained_model)
             self.sequence_summary = SequenceSummary(self._transformer_model.config)
+        elif 'albert' in pretrained_model:
+            self._transformer_model = AlbertModel.from_pretrained(pretrained_model)
+            self._padding_value = 0  # The index of the BERT padding token
+            self._dropout = torch.nn.Dropout(self._transformer_model.config.hidden_dropout_prob)
         elif 'bert' in pretrained_model:
             self._transformer_model = BertModel.from_pretrained(pretrained_model)
             self._padding_value = 0  # The index of the BERT padding token
@@ -121,6 +126,12 @@ class TransformerMCQAModel(Model):
                                                       attention_mask=util.combine_initial_dims(question_mask))
             cls_output = self._dropout(pooled_output)
             #cls_output = pooled_output
+        if 'albert' in self._pretrained_model:
+            transformer_outputs, pooled_output = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
+                                                      # token_type_ids=util.combine_initial_dims(segment_ids),
+                                                      attention_mask=util.combine_initial_dims(question_mask))
+            cls_output = self._dropout(pooled_output)
+            #cls_output = pooled_output
         elif 'xlnet' in self._pretrained_model:
             transformer_outputs = self._transformer_model(input_ids=util.combine_initial_dims(input_ids),
                                                          token_type_ids=util.combine_initial_dims(segment_ids),
@@ -134,10 +145,6 @@ class TransformerMCQAModel(Model):
             cls_output = self._dropout(pooled_output)
         else:
             assert (ValueError)
-
-
-
-
 
         if self._debug > 0:
             print(f"cls_output = {cls_output}")

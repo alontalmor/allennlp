@@ -2,11 +2,12 @@ from typing import Dict, Optional, List, Any
 
 import logging
 from overrides import overrides
-from pytorch_transformers.modeling_roberta import RobertaClassificationHead, RobertaConfig, RobertaForMaskedLM
-from pytorch_transformers.modeling_xlnet import XLNetConfig, XLNetLMHeadModel
-from pytorch_transformers.modeling_bert import BertConfig, BertForMaskedLM
-from pytorch_transformers.modeling_utils import SequenceSummary
-from pytorch_transformers.tokenization_gpt2 import bytes_to_unicode
+from transformers.modeling_roberta import RobertaClassificationHead, RobertaConfig, RobertaForMaskedLM
+from transformers.modeling_xlnet import XLNetConfig, XLNetLMHeadModel
+from transformers.modeling_bert import BertConfig, BertForMaskedLM
+from transformers.modeling_albert import AlbertConfig, AlbertForMaskedLM
+#from transformers.modeling_utils import SequenceSummary
+#from transformers.tokenization_gpt2 import bytes_to_unicode
 import re, json, os
 import numpy as np
 import torch
@@ -73,7 +74,6 @@ class RobertaForMultiChoiceMaskedLM(RobertaForMaskedLM):
 @Model.register("transformer_masked_lm")
 class TransformerMaskedLMModel(Model):
     """
-
     """
     def __init__(self,
                  vocab: Vocabulary,
@@ -111,6 +111,12 @@ class TransformerMaskedLMModel(Model):
         elif 'xlnet' in pretrained_model:
             self._padding_value = 5  # The index of the XLNet padding token
             self._transformer_model = XLNetLMHeadModel.from_pretrained(pretrained_model)
+        elif 'albert' in pretrained_model:
+            if loss_on_all_vocab:
+                self._transformer_model = AlbertForMaskedLM.from_pretrained(pretrained_model)
+            else:
+                self._transformer_model = BertForMultiChoiceMaskedLM.from_pretrained(pretrained_model)
+            self._padding_value = 0  # The index of the BERT padding token
         elif 'bert' in pretrained_model:
             if loss_on_all_vocab:
                 self._transformer_model = BertForMaskedLM.from_pretrained(pretrained_model)
@@ -156,6 +162,8 @@ class TransformerMaskedLMModel(Model):
         if 'roberta' in pretrained_model:
             self._transformer_model.lm_head.decoder.weight.requires_grad = True
             self._transformer_model.lm_head.bias.requires_grad = True
+        elif 'albert' in pretrained_model:
+            pass
         elif 'bert' in pretrained_model:
             self._transformer_model.cls.predictions.decoder.weight.requires_grad = True
             self._transformer_model.cls.predictions.bias.requires_grad = True
@@ -254,5 +262,3 @@ class TransformerMaskedLMModel(Model):
                              weights_file=weights_file,
                              cuda_device=cuda_device,
                              **kwargs)
-
-

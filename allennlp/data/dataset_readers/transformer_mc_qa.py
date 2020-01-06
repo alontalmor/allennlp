@@ -59,12 +59,9 @@ class TransformerMCQAReader(DatasetReader):
         if do_lowercase is None:
             do_lowercase = '-uncased' in pretrained_model
 
-        self._tokenizer = PretrainedTransformerTokenizer(pretrained_model,
-                                                         do_lowercase=do_lowercase,
-                                                         start_tokens = [],
-                                                         end_tokens = [])
+        self._tokenizer = PretrainedTransformerTokenizer(pretrained_model)
         self._tokenizer_internal = self._tokenizer._tokenizer
-        token_indexer = PretrainedTransformerIndexer(pretrained_model, do_lowercase=do_lowercase)
+        token_indexer = PretrainedTransformerIndexer(pretrained_model)
         self._token_indexers = {'tokens': token_indexer}
 
         self._max_pieces = max_pieces

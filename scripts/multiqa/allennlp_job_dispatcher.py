@@ -736,7 +736,6 @@ experiment_name = '068_oLMpics_LearningCurves'
 #experiment_name = '094_oLMpics_train_LC_non_transformer'
 #experiment_name = '095_oLMpics_zeroshot_eval'
 #experiment_name = '096_oLMpics_LearningCurves_HP_GRID'
-#experiment_name = '097_oLMpics_train_and_predicted_MC-MLM'
 
 #if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
 #queue = '4GPUs'
