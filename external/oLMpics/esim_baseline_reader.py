@@ -12,7 +12,7 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, LabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
-from allennlp.data.tokenizers import Tokenizer\
+from allennlp.data.tokenizers import Tokenizer, SpacyTokenizer
     #, WordTokenizer
 
 #from oLMpics.common.file_utils import cached_path
@@ -42,7 +42,7 @@ class BaselineEsimReader(DatasetReader):
                  sample: int = -1,
                  use_only_gold_examples: bool = False) -> None:
         super().__init__(lazy=False)
-        self._tokenizer = tokenizer or WordTokenizer()
+        self._tokenizer = tokenizer or SpacyTokenizer()
         self._token_indexers = token_indexers or {'tokens': SingleIdTokenIndexer()}
         self.use_only_gold_examples = use_only_gold_examples
         self._sample = sample

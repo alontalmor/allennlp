@@ -1,27 +1,19 @@
 from typing import Dict, Optional, List, Any
 
-import logging
-from overrides import overrides
-from transformers.modeling_roberta import RobertaClassificationHead, RobertaConfig, RobertaForMaskedLM
-from transformers.modeling_xlnet import XLNetConfig, XLNetLMHeadModel
-from transformers.modeling_bert import BertConfig, BertForMaskedLM
-from transformers.modeling_albert import AlbertConfig, AlbertForMaskedLM
-#from transformers.modeling_utils import SequenceSummary
-#from transformers.tokenization_gpt2 import bytes_to_unicode
+from transformers.modeling_roberta import RobertaForMaskedLM
+from transformers.modeling_xlnet import XLNetLMHeadModel
+from transformers.modeling_bert import BertForMaskedLM
+from transformers.modeling_albert import AlbertForMaskedLM
 import re, json, os
 import numpy as np
 import torch
-from torch.nn.modules.linear import Linear
-from torch.nn.functional import binary_cross_entropy_with_logits
 from torch.nn import CrossEntropyLoss
 
 from allennlp.common.params import Params
 from allennlp.data import Vocabulary
-from allennlp.models.archival import load_archive
 from allennlp.models.model import Model
-from allennlp.models.reading_comprehension.util import get_best_span
 from allennlp.nn import RegularizerApplicator, util
-from allennlp.training.metrics import BooleanAccuracy, CategoricalAccuracy, SquadEmAndF1
+from allennlp.training.metrics import CategoricalAccuracy
 
 
 class BertForMultiChoiceMaskedLM(BertForMaskedLM):
@@ -79,16 +71,9 @@ class TransformerMaskedLMModel(Model):
                  vocab: Vocabulary,
                  pretrained_model: str = None,
                  requires_grad: bool = True,
-                 unfreeze_pooler: bool = False,
-                 top_layer_only: bool = True,
-                 transformer_weights_model: str = None,
-                 reset_classifier: bool = False,
-                 per_choice_loss: bool = False,
                  predictions_file=None,
                  layer_freeze_regexes: List[str] = None,
                  probe_type: str = None,
-                 mc_strategy: str = None,
-                 on_load: bool = False,
                  loss_on_all_vocab: bool = False,
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
@@ -131,7 +116,6 @@ class TransformerMaskedLMModel(Model):
         elif probe_type == 'linear':
             layer_freeze_regexes = ["embeddings", "encoder", "pooler", "dense", "LayerNorm", "layer_norm"]
 
-        ## TODO ask oyvind about this code ...
         for name, param in self._transformer_model.named_parameters():
             if layer_freeze_regexes and requires_grad:
                 grad = not any([bool(re.search(r, name)) for r in layer_freeze_regexes])
@@ -141,22 +125,6 @@ class TransformerMaskedLMModel(Model):
                 param.requires_grad = True
             else:
                 param.requires_grad = False
-
-
-        unfreezing_the_lmheads = '''if 'roberta' in pretrained_model:
-            self._transformer_model.lm_head.dense.weight.requires_grad = True
-            self._transformer_model.lm_head.dense.bias.requires_grad = True
-            self._transformer_model.lm_head.layer_norm.weight.requires_grad = True
-            self._transformer_model.lm_head.layer_norm.bias.requires_grad = True
-            self._transformer_model.lm_head.decoder.weight.requires_grad = True
-            self._transformer_model.lm_head.bias.requires_grad = True
-        elif 'bert' in pretrained_model:
-            self._transformer_model.cls.predictions.transform.dense.weight.requires_grad = True
-            self._transformer_model.cls.predictions.transform.dense.bias.requires_grad = True
-            self._transformer_model.cls.predictions.transform.LayerNorm.weight.requires_grad = True
-            self._transformer_model.cls.predictions.transform.LayerNorm.bias.requires_grad = True
-            self._transformer_model.cls.predictions.decoder.weight.requires_grad = True
-            self._transformer_model.cls.predictions.bias.requires_grad = True'''
 
         # make sure decode gredients are on.
         if 'roberta' in pretrained_model:
@@ -187,7 +155,6 @@ class TransformerMaskedLMModel(Model):
         masked_labels[(masked_labels == 0)] = -1
 
         batch_size = input_ids.size(0)
-        # TODO make this a param
         num_choices = len(metadata[0]['choice_text_list'])
 
         question_mask = (input_ids != self._padding_value).long()
@@ -208,7 +175,6 @@ class TransformerMaskedLMModel(Model):
         else:
             assert (ValueError)
 
-        # TODO move this terrible loopy code i wrote to martix operations :)  ...
         output_dict = {}
         label_logits = torch.zeros(batch_size,num_choices)
         for e,example in enumerate(metadata):
@@ -231,11 +197,6 @@ class TransformerMaskedLMModel(Model):
 
         self._accuracy(label_logits, label)
         output_dict["loss"] = loss
-
-
-
-        #if not (label_logits.numpy().argmax() == label.numpy())[0]:
-        #    logging.info("%s answer: %s" % (metadata[0]['question_text'], metadata[0]['choice_text_list'][metadata[0]['correct_answer_index']]))
 
         if self._debug > 0:
             print(output_dict)
