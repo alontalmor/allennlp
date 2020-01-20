@@ -29,7 +29,7 @@ class TransformerMCQAReader(DatasetReader):
                  pretrained_model: str,
                  max_pieces: int = 512,
                  num_choices: int = 4,
-                 add_prefix: bool = False,
+                 add_prefix: int = 0,
                  sample: int = -1) -> None:
         super().__init__()
 
