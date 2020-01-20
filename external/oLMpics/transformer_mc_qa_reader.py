@@ -29,7 +29,7 @@ class TransformerMCQAReader(DatasetReader):
                  pretrained_model: str,
                  max_pieces: int = 512,
                  num_choices: int = 4,
-                 add_prefix: Dict[str, str] = None,
+                 add_prefix: bool = False,
                  sample: int = -1) -> None:
         super().__init__()
 
@@ -41,7 +41,7 @@ class TransformerMCQAReader(DatasetReader):
         self._max_pieces = max_pieces
         self._sample = sample
         self._num_choices = num_choices
-        self._add_prefix = add_prefix or {}
+        self._add_prefix = add_prefix
 
         for model in ["roberta", "bert", "openai-gpt", "gpt2", "transfo-xl", "xlnet", "xlm"]:
             if model in pretrained_model:
@@ -160,8 +160,9 @@ class TransformerMCQAReader(DatasetReader):
         return Instance(fields)
 
     def transformer_features_from_qa(self, question: str, answer: str):
-        question = self._add_prefix.get("q", "") + question
-        answer = self._add_prefix.get("a",  "") + answer
+        if self._add_prefix:
+            question = "Q: " + question
+            answer = "A: " + answer
 
         # Alon changing mask type:
         if self._model_type in ['roberta','xlnet']:
