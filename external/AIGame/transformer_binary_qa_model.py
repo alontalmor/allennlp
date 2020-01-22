@@ -17,8 +17,8 @@ from allennlp.nn import RegularizerApplicator, util
 from allennlp.training.metrics import BooleanAccuracy
 
 
-@Model.register("bert_binary_class")
-class BertBinClass(Model):
+@Model.register("transformer_binary_qa")
+class TransformerBinaryQA(Model):
     """
     """
     def __init__(self,

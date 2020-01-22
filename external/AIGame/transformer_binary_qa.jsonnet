@@ -28,7 +28,7 @@ local cuda_device = 0;
   "validation_data_path": "s3://olmpics/challenge/commonsense_knowledge_dev.jsonl.gz",
 
   "model": {
-    "type": "transformer_mc_qa",
+    "type": "transformer_binary_qa",
     "pretrained_model": transformer_model
   },
   "iterator": {
