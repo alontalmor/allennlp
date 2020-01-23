@@ -173,7 +173,8 @@ class TransformerMCQAReader(DatasetReader):
         elif self._model_type in ['albert']:
             question = question.replace('[MASK]', '[MASK]>')
 
-        tokens = self._tokenizer.tokenize_sentence_pair(question, answer)
+        tokens = self._tokenizer.tokenize(question + ' ' + answer)
+        #tokens = self._tokenizer.tokenize_sentence_pair(question, answer)
 
         # TODO make sure the segments IDs do not contribute
         segment_ids = [0] * len(tokens)

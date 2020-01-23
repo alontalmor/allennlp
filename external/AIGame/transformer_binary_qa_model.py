@@ -52,6 +52,16 @@ class TransformerBinaryQA(Model):
         else:
             assert (ValueError)
 
+        for name, param in self._transformer_model.named_parameters():
+            if layer_freeze_regexes and requires_grad:
+                grad = not any([bool(re.search(r, name)) for r in layer_freeze_regexes])
+            else:
+                grad = requires_grad
+            if grad:
+                param.requires_grad = True
+            else:
+                param.requires_grad = False
+
         transformer_config = self._transformer_model.config
         transformer_config.num_labels = 1
         self._output_dim = self._transformer_model.config.hidden_size

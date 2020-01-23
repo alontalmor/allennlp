@@ -15,7 +15,7 @@ from allennlp.data.fields import ListField, MetadataField, SequenceLabelField
 from allennlp.data.instance import Instance
 from allennlp.data.token_indexers import SingleIdTokenIndexer, TokenIndexer
 from allennlp.data.tokenizers import Token
-from allennlp.data.tokenizers.word_splitter import BertBasicWordSplitter
+from allennlp.data.tokenizers import SpacyTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
