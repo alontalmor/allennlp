@@ -70,52 +70,12 @@ class TransformerMCQAReader(DatasetReader):
         for item_json in Tqdm.tqdm(item_jsons,total=len(item_jsons)):
             item_id = item_json["id"]
 
-            question_text = item_json["question"]["stem"]
-
-            choice_label_to_id = {}
-            choice_text_list = []
-            choice_context_list = []
-            choice_label_list = []
-            choice_annotations_list = []
-
-            any_correct = False
-            choice_id_correction = 0
-
-            for choice_id, choice_item in enumerate(item_json["question"]["choices"]):
-                choice_label = choice_item["label"]
-                choice_label_to_id[choice_label] = choice_id - choice_id_correction
-                choice_text = choice_item["text"]
-
-                choice_text_list.append(choice_text)
-                choice_label_list.append(choice_label)
-
-                if item_json.get('answerKey') == choice_label:
-                    if any_correct:
-                        raise ValueError("More than one correct answer found for {item_json}!")
-                    any_correct = True
-
-            # TODO this is a patch to enable binary class prediction with the same format
-            if not any_correct and 'answerKey' in item_json and self._num_choices == 1:
-                answer_id = item_json["answerKey"]
-            else:
-                if not any_correct and 'answerKey' in item_json:
-                    raise ValueError("No correct answer found for {item_json}!")
-
-                answer_id = choice_label_to_id.get(item_json.get("answerKey"))
-
-            # Pad choices with empty strings if not right number
-            if len(choice_text_list) != self._num_choices:
-                choice_text_list = (choice_text_list + self._num_choices * [''])[:self._num_choices]
-                choice_context_list = (choice_context_list + self._num_choices * [None])[:self._num_choices]
-                if answer_id is not None and answer_id >= self._num_choices:
-                    logging.warning(f"Skipping question with more than {self._num_choices} answers: {item_json}")
-                    continue
+            statement_text = item_json["phrase"]
 
             yield self.text_to_instance(
                     item_id=item_id,
-                    question=question_text,
-                    choice_list=choice_text_list,
-                    answer_id=answer_id)
+                    question=statement_text,
+                    answer_id=item_json["answer"])
 
         data_file.close()
 
@@ -123,60 +83,31 @@ class TransformerMCQAReader(DatasetReader):
     def text_to_instance(self,  # type: ignore
                          item_id: str,
                          question: str,
-                         choice_list: List[str],
                          answer_id: int = None) -> Instance:
         fields: Dict[str, Field] = {}
 
-        qa_fields = []
-        segment_ids_fields = []
-        qa_tokens_list = []
-        annotation_tags_fields = []
-        for idx, choice in enumerate(choice_list):
-            choice_annotations = []
-            qa_tokens, segment_ids = self.transformer_features_from_qa(question, choice)
-            qa_field = TextField(qa_tokens, self._token_indexers)
-            segment_ids_field = SequenceLabelField(segment_ids, qa_field)
-            qa_fields.append(qa_field)
-            qa_tokens_list.append(qa_tokens)
-            segment_ids_fields.append(segment_ids_field)
+        qa_tokens, segment_ids = self.transformer_features_from_qa(question)
+        qa_field = TextField(qa_tokens, self._token_indexers)
+        segment_ids_field = SequenceLabelField(segment_ids, qa_field)
 
-
-        fields['question'] = ListField(qa_fields)
-        fields['segment_ids'] = ListField(segment_ids_fields)
+        fields['phrase'] = qa_field
+        fields['segment_ids'] = segment_ids_field
         if answer_id is not None:
             fields['label'] = LabelField(answer_id, skip_indexing=True)
 
         metadata = {
             "id": item_id,
             "question_text": question,
-            "choice_text_list": choice_list,
-            "correct_answer_index": answer_id,
-            "question_tokens_list": qa_tokens_list,
+            "correct_answer_index": answer_id
         }
-
-        if len(annotation_tags_fields) > 0:
-            fields['annotation_tags'] = ListField(annotation_tags_fields)
-            metadata['annotation_tags'] = [x.array for x in annotation_tags_fields]
 
         fields["metadata"] = MetadataField(metadata)
 
         return Instance(fields)
 
-    def transformer_features_from_qa(self, question: str, answer: str):
-        if self._add_prefix:
-            question = "Q: " + question
-            answer = "A: " + answer
+    def transformer_features_from_qa(self, question: str):
 
-        # Alon changing mask type:
-        if self._model_type in ['roberta','xlnet']:
-            question = question.replace('[MASK]','<mask>')
-        elif self._model_type in ['albert']:
-            question = question.replace('[MASK]', '[MASK]>')
-
-        tokens = self._tokenizer.tokenize(question + ' ' + answer)
-        #tokens = self._tokenizer.tokenize_sentence_pair(question, answer)
-
-        # TODO make sure the segments IDs do not contribute
+        tokens = self._tokenizer.tokenize(question)
         segment_ids = [0] * len(tokens)
 
         return tokens, segment_ids

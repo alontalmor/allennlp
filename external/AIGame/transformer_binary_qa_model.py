@@ -78,16 +78,14 @@ class TransformerBinaryQA(Model):
 
 
     def forward(self,
-                    question: Dict[str, torch.LongTensor],
+                    phrase: Dict[str, torch.LongTensor],
                     segment_ids: torch.LongTensor = None,
                     label: torch.LongTensor = None,
                     metadata: List[Dict[str, Any]] = None) -> torch.Tensor:
 
         self._debug -= 1
-        input_ids = question['tokens']
-
+        input_ids = phrase['tokens']
         batch_size = input_ids.size(0)
-        num_choices = input_ids.size(1)
 
         question_mask = (input_ids != self._padding_value).long()
 
@@ -118,7 +116,7 @@ class TransformerBinaryQA(Model):
 
         label_logits = self._classifier(cls_output)
         label_logits_flat = label_logits.squeeze(1)
-        label_logits = label_logits.view(-1, num_choices)
+        label_logits = label_logits.view(-1, 1)
 
         output_dict = {}
         output_dict['label_logits'] = label_logits
