@@ -19,12 +19,6 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 @DatasetReader.register("transformer_mc_qa")
 class TransformerMCQAReader(DatasetReader):
-    """
-
-    Parameters
-    ----------
-    """
-
     def __init__(self,
                  pretrained_model: str,
                  max_pieces: int = 512,
@@ -71,11 +65,13 @@ class TransformerMCQAReader(DatasetReader):
             item_id = item_json["id"]
 
             statement_text = item_json["phrase"]
+            context = item_json["context"] if "context" in item_json else None
 
             yield self.text_to_instance(
                     item_id=item_id,
                     question=statement_text,
-                    answer_id=item_json["answer"])
+                    answer_id=item_json["answer"],
+                    context = context)
 
         data_file.close()
 
@@ -83,10 +79,11 @@ class TransformerMCQAReader(DatasetReader):
     def text_to_instance(self,  # type: ignore
                          item_id: str,
                          question: str,
-                         answer_id: int = None) -> Instance:
+                         answer_id: int = None,
+                         context: str = None) -> Instance:
         fields: Dict[str, Field] = {}
 
-        qa_tokens, segment_ids = self.transformer_features_from_qa(question)
+        qa_tokens, segment_ids = self.transformer_features_from_qa(question, context)
         qa_field = TextField(qa_tokens, self._token_indexers)
         segment_ids_field = SequenceLabelField(segment_ids, qa_field)
 
@@ -105,9 +102,12 @@ class TransformerMCQAReader(DatasetReader):
 
         return Instance(fields)
 
-    def transformer_features_from_qa(self, question: str):
+    def transformer_features_from_qa(self, question: str, context:str):
 
-        tokens = self._tokenizer.tokenize(question)
+        if context is not None:
+            tokens = self._tokenizer.tokenize_sentence_pair(question, context)
+        else:
+            tokens = self._tokenizer.tokenize(question)
         segment_ids = [0] * len(tokens)
 
         return tokens, segment_ids
