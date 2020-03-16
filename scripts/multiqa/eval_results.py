@@ -119,11 +119,11 @@ def process_results(args):
     if args.predictions_file is not None:
         if args.eval_path is not None:
             # uploading to cloud
-            command = "aws s3 cp " + args.predictions_file + " " + args.prediction_path + "/" + args.predictions_file.split('/')[-1] + " --acl public-read"
+            command = "aws s3 cp " + args.predictions_file + " " + args.prediction_path + " --acl public-read"
             Popen(command, shell=True, preexec_fn=os.setsid)
         else:
             # uploading to cloud
-            command = "aws s3 cp " + args.predictions_file + " " + args.prediction_path + "/" + args.predictions_file.split('/')[-1] + " --acl public-read"
+            command = "aws s3 cp " + args.predictions_file + " " + args.prediction_path + " --acl public-read"
             Popen(command, shell=True, preexec_fn=os.setsid)
 
 def main():
