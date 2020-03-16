@@ -5,7 +5,7 @@ from transformers.modeling_xlnet import XLNetModel
 from transformers.modeling_bert import BertModel
 from transformers.modeling_albert import AlbertModel
 from transformers.modeling_utils import SequenceSummary
-import re
+import re, json
 import torch
 from torch.nn.modules.linear import Linear
 from torch.nn.functional import binary_cross_entropy_with_logits
@@ -28,9 +28,12 @@ class TransformerBinaryQA(Model):
                  top_layer_only: bool = True,
                  bert_weights_model: str = None,
                  per_choice_loss: bool = False,
+                 predictions_file=None,
                  layer_freeze_regexes: List[str] = None,
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
+
+        self._predictions_file = predictions_file
 
         self._pretrained_model = pretrained_model
         if 'roberta' in pretrained_model:
@@ -127,7 +130,21 @@ class TransformerBinaryQA(Model):
         if label is not None:
             loss = self._loss(label_logits, label.view(-1,1).float())
             self._accuracy(label_logits > 0 , label.view(-1,1) > 0)
-            output_dict["loss"] = loss
+            output_dict["loss"] = loss# TODO this is shortcut to get predictions fast..
+        if self._predictions_file is not None:# and not self.training:
+            with open(self._predictions_file, 'a') as f:
+                for e, example in enumerate(metadata):
+                    logit = float(label_logits[e, :].cpu().data.numpy().astype(float))
+                    prediction = int(label_logits[e,:].cpu().data.numpy().astype(float) > 0)
+                    f.write(json.dumps({'id': example['id'], \
+                                        'phrase': example['question_text' ], \
+                                        'context': example['context'], \
+                                        'logits': logit,
+                                        'answer': example['correct_answer_index'],
+                                        'prediction': prediction,
+                                        'is_correct': (example['correct_answer_index'] == prediction) * 1.0}) + '\n')
+
+
 
         return output_dict
 

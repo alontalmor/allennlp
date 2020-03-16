@@ -95,6 +95,7 @@ class TransformerMCQAReader(DatasetReader):
         metadata = {
             "id": item_id,
             "question_text": question,
+            "context": context,
             "correct_answer_index": answer_id
         }
 
