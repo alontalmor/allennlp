@@ -119,11 +119,11 @@ def process_results(args):
     if args.predictions_file is not None:
         if args.eval_path is not None:
             # uploading to cloud
-            command = "aws s3 cp " + args.predictions_file + " s3://olmpics/predictions/" + args.predictions_file.split('/')[-1] + " --acl public-read"
+            command = "aws s3 cp " + args.predictions_file + " " + args.prediction_path + "/" + args.predictions_file.split('/')[-1] + " --acl public-read"
             Popen(command, shell=True, preexec_fn=os.setsid)
         else:
             # uploading to cloud
-            command = "aws s3 cp " + args.predictions_file + " s3://olmpics/predictions/" + args.predictions_file.split('/')[-1] + " --acl public-read"
+            command = "aws s3 cp " + args.predictions_file + " " + args.prediction_path + "/" + args.predictions_file.split('/')[-1] + " --acl public-read"
             Popen(command, shell=True, preexec_fn=os.setsid)
 
 def main():
@@ -144,6 +144,7 @@ def main():
     parse.add_argument("--experiment", default=None, type=str)
     parse.add_argument("--full_experiments_name", default=None, type=str)
     parse.add_argument("--predictions_file", default=None, type=str)
+    parse.add_argument("--prediction_path", default="s3://aigame/predictions", type=str)
     parse.add_argument("--eval_path", default=None, type=str)
     parse.add_argument("--remove_serialization_dir", default=None, type=str)
     args = parse.parse_args()
