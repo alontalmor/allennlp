@@ -32,21 +32,21 @@ class AllenNLP_Job_Dispatcher():
         self.s3_preproc = []
         s3 = boto3.client("s3")
 
-        all_objects = s3.list_objects(Bucket='multiqa', Prefix='models/')
+        all_objects = s3.list_objects(Bucket='aigame', Prefix='models/')
         #all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='models/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='models/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='models_new/')['Contents']
-        all_objects['Contents'] += s3.list_objects(Bucket='olmpics', Prefix='models/')['Contents']
-        all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
+        #all_objects['Contents'] += s3.list_objects(Bucket='aigame', Prefix='models/')['Contents']
+        #all_objects['Contents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
         if 'Contents' in all_objects:
             self.s3_models = [obj['Key'] for obj in all_objects['Contents']]
         if len(self.s3_models) > 900:
             print('\n\n!!!!!!!!!!!!!!!!! approching S3 limit of 1000 results\n\n')
 
-        all_objects = s3.list_objects(Bucket='multiqa', Prefix='data/')
+        all_objects = s3.list_objects(Bucket='aigame', Prefix='data/')
         #all_objects = s3.list_objects(Bucket='multiqa', Prefix='preproc/')
-        all_objects['Contents'] += s3.list_objects(Bucket='commensenseqa', Prefix='crowdsense/')['Contents']
-        all_objects['Contents'] += s3.list_objects(Bucket='olmpics', Prefix='challenge/')['Contents']
+        #all_objects['Contents'] += s3.list_objects(Bucket='commensenseqa', Prefix='crowdsense/')['Contents']
+        #all_objects['Contents'] += s3.list_objects(Bucket='aigame', Prefix='data/')['Contents']
         #all_objects['Cotents'] += s3.list_objects(Bucket='multiqa', Prefix='data/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='mrqa', Prefix='data/')['Contents']
         #all_objects['Contents'] += s3.list_objects(Bucket='beatbert', Prefix='data/')['Contents']
@@ -730,7 +730,7 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 #experiment_name = '087_Pytorch_Transformers_train'
 #experiment_name = '088_oLMpics_build_challenge'
 
-experiment_name = '068_oLMpics_LearningCurves'
+#experiment_name = '068_oLMpics_LearningCurves'
 #experiment_name = '069_oLMpics_LearningCurves_MASKED'
 #experiment_name = '069_oLMpics_LearningCurves_MASKED_lowerbound_baseline'
 #experiment_name = '089_oLMpics_train_triplets'
@@ -742,10 +742,17 @@ experiment_name = '068_oLMpics_LearningCurves'
 #experiment_name = '095_oLMpics_zeroshot_eval'
 #experiment_name = '096_oLMpics_LearningCurves_HP_GRID'
 
+
+#experiment_name = '098_TeachAI_train_hp_grid'
+#experiment_name = '099_TeachAI_train'
+experiment_name = '100_TeachAI_eval'
+#experiment_name = '101_TeachAI_finetune_hp_grid'
+#experiment_name = "102_TeachAI_finetune"
+
 #if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
 #queue = '4GPUs'
 #queue = 'V100'
-queue = 'gamir'
+#queue = 'gamir'
 #queue = 'rack-gamir-g05'
 #queue = 'pc-jonathan1'
 #queue = 'rack-jonathan-g08'

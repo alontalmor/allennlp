@@ -1,4 +1,4 @@
-local train_size = 2000;
+local train_size = 10000;
 local batch_size = 8;
 local gradient_accumulation_batch_size = 2;
 local num_epochs = 4;
@@ -11,7 +11,7 @@ local cuda_device = 0;
 {
   "dataset_reader": {
     "type": "transformer_mc_qa",
-    "sample": 2000,
+    "sample": 10000,
     "num_choices": 1,
     "pretrained_model": transformer_model,
     "max_pieces": 256

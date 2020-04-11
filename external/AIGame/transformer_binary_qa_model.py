@@ -34,6 +34,8 @@ class TransformerBinaryQA(Model):
         super().__init__(vocab, regularizer)
 
         self._predictions_file = predictions_file
+        with open(self._predictions_file, 'w') as f:
+            pass
 
         self._pretrained_model = pretrained_model
         if 'roberta' in pretrained_model:
