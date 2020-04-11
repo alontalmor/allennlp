@@ -1,5 +1,5 @@
 """
-Various utilities that don't fit anwhere else.
+Various utilities that don't fit anywhere else.
 """
 import importlib
 import json
@@ -9,28 +9,40 @@ import pkgutil
 import random
 import subprocess
 import sys
-import torch.distributed as dist
-from itertools import zip_longest, islice
+from contextlib import contextmanager
+from itertools import islice, zip_longest
 from logging import Filter
-from typing import Any, Callable, Dict, List, Tuple, TypeVar, Iterable, Iterator
+from pathlib import Path
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+)
+
+import numpy
+import spacy
+import torch
+import torch.distributed as dist
+from spacy.cli.download import download as spacy_download
+from spacy.language import Language as SpacyModelType
+
+from allennlp.common.checks import log_pytorch_version_info
+from allennlp.common.params import Params
+from allennlp.common.tqdm import Tqdm
 
 try:
     import resource
 except ImportError:
     # resource doesn't exist on Windows systems
     resource = None
-
-import torch
-import numpy
-import spacy
-from spacy.cli.download import download as spacy_download
-from spacy.language import Language as SpacyModelType
-
-# This base import is so we can refer to allennlp.data.Token in `sanitize()` without creating
-# circular dependencies.
-from allennlp.common.checks import log_pytorch_version_info
-from allennlp.common.params import Params
-from allennlp.common.tqdm import Tqdm
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +55,11 @@ JsonDict = Dict[str, Any]
 # those cases).
 START_SYMBOL = "@start@"
 END_SYMBOL = "@end@"
+
+
+PathType = Union[os.PathLike, str]
+T = TypeVar("T")
+ContextManagerFunctionReturnType = Generator[T, None, None]
 
 
 def sanitize(x: Any) -> Any:
@@ -91,12 +108,15 @@ def sanitize(x: Any) -> Any:
 
 def group_by_count(iterable: List[Any], count: int, default_value: Any) -> List[List[Any]]:
     """
-    Takes a list and groups it into sublists of size ``count``, using ``default_value`` to pad the
-    list at the end if the list is not divisable by ``count``.
+    Takes a list and groups it into sublists of size `count`, using `default_value` to pad the
+    list at the end if the list is not divisable by `count`.
 
     For example:
+
+    ```
     >>> group_by_count([1, 2, 3, 4, 5, 6, 7], 3, 0)
     [[1, 2, 3], [4, 5, 6], [7, 0, 0]]
+    ```
 
     This is a short method, but it's complicated and hard to remember as a one-liner, so we just
     make a function out of it.
@@ -131,8 +151,8 @@ def pad_sequence_to_length(
     Take a list of objects and pads it to the desired length, returning the padded list.  The
     original list is not modified.
 
-    Parameters
-    ----------
+    # Parameters
+
     sequence : List
         A list of objects to be padded.
 
@@ -149,8 +169,8 @@ def pad_sequence_to_length(
         When we add padding tokens (or truncate the sequence), should we do it on the right or
         the left?
 
-    Returns
-    -------
+    # Returns
+
     padded_sequence : List
     """
     # Truncates the sequence to the desired length.
@@ -159,18 +179,21 @@ def pad_sequence_to_length(
     else:
         padded_sequence = sequence[-desired_length:]
     # Continues to pad with default_value() until we reach the desired length.
-    for _ in range(desired_length - len(padded_sequence)):
-        if padding_on_right:
-            padded_sequence.append(default_value())
-        else:
-            padded_sequence.insert(0, default_value())
+    pad_length = desired_length - len(padded_sequence)
+    # This just creates the default value once, so if it's a list, and if it gets mutated
+    # later, it could cause subtle bugs. But the risk there is low, and this is much faster.
+    values_to_pad = [default_value()] * pad_length
+    if padding_on_right:
+        padded_sequence = padded_sequence + values_to_pad
+    else:
+        padded_sequence = values_to_pad + padded_sequence
     return padded_sequence
 
 
 def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> Dict[A, float]:
     """
-    Returns a new dictionary with noise added to every key in ``dictionary``.  The noise is
-    uniformly distributed within ``noise_param`` percent of the value for every value in the
+    Returns a new dictionary with noise added to every key in `dictionary`.  The noise is
+    uniformly distributed within `noise_param` percent of the value for every value in the
     dictionary.
     """
     new_dict = {}
@@ -183,9 +206,9 @@ def add_noise_to_dict_values(dictionary: Dict[A, float], noise_param: float) -> 
 
 def namespace_match(pattern: str, namespace: str):
     """
-    Matches a namespace pattern against a namespace string.  For example, ``*tags`` matches
-    ``passage_tags`` and ``question_tags`` and ``tokens`` matches ``tokens`` but not
-    ``stemmed_tokens``.
+    Matches a namespace pattern against a namespace string.  For example, `*tags` matches
+    `passage_tags` and `question_tags` and `tokens` matches `tokens` but not
+    `stemmed_tokens`.
     """
     if pattern[0] == "*" and namespace.endswith(pattern[1:]):
         return True
@@ -204,10 +227,10 @@ def prepare_environment(params: Params):
     is very difficult to achieve with libraries doing optimized linear algebra due to massively
     parallel execution, which is exacerbated by using GPUs.
 
-    Parameters
-    ----------
+    # Parameters
+
     params: Params object or dict, required.
-        A ``Params`` object or dict holding the json parameters.
+        A `Params` object or dict holding the json parameters.
     """
     seed = params.pop_int("random_seed", 13370)
     numpy_seed = params.pop_int("numpy_seed", 1337)
@@ -307,7 +330,8 @@ def prepare_global_logging(
     if os.environ.get("ALLENNLP_DEBUG"):
         LEVEL = logging.DEBUG
     else:
-        LEVEL = logging.INFO
+        level_name = os.environ.get("ALLENNLP_LOG_LEVEL")
+        LEVEL = logging._nameToLevel.get(level_name, logging.INFO)
 
     if rank == 0:
         # stdout/stderr handlers are added only for the
@@ -378,7 +402,46 @@ def get_spacy_model(
     return LOADED_SPACY_MODELS[options]
 
 
-def import_submodules(package_name: str) -> None:
+@contextmanager
+def pushd(new_dir: PathType, verbose: bool = False) -> ContextManagerFunctionReturnType[None]:
+    """
+    Changes the current directory to the given path and prepends it to `sys.path`.
+
+    This method is intended to use with `with`, so after its usage, the current directory will be
+    set to the previous value.
+    """
+    previous_dir = os.getcwd()
+    if verbose:
+        logger.info(f"Changing directory to {new_dir}")  # type: ignore
+    os.chdir(new_dir)
+    try:
+        yield
+    finally:
+        if verbose:
+            logger.info(f"Changing directory back to {previous_dir}")
+        os.chdir(previous_dir)
+
+
+@contextmanager
+def push_python_path(path: PathType) -> ContextManagerFunctionReturnType[None]:
+    """
+    Prepends the given path to `sys.path`.
+
+    This method is intended to use with `with`, so after its usage, its value willbe removed from
+    `sys.path`.
+    """
+    # In some environments, such as TC, it fails when sys.path contains a relative path, such as ".".
+    path = Path(path).resolve()
+    path = str(path)
+    sys.path.insert(0, path)
+    try:
+        yield
+    finally:
+        # Better to remove by value, in case `sys.path` was manipulated in between.
+        sys.path.remove(path)
+
+
+def import_module_and_submodules(package_name: str) -> None:
     """
     Import all submodules under the given package.
     Primarily useful so that people using AllenNLP as a library
@@ -390,21 +453,20 @@ def import_submodules(package_name: str) -> None:
     # For some reason, python doesn't always add this by default to your path, but you pretty much
     # always want it when using `--include-package`.  And if it's already there, adding it again at
     # the end won't hurt anything.
-    sys.path.append(".")
+    with push_python_path("."):
+        # Import at top level
+        module = importlib.import_module(package_name)
+        path = getattr(module, "__path__", [])
+        path_string = "" if not path else path[0]
 
-    # Import at top level
-    module = importlib.import_module(package_name)
-    path = getattr(module, "__path__", [])
-    path_string = "" if not path else path[0]
-
-    # walk_packages only finds immediate children, so need to recurse.
-    for module_finder, name, _ in pkgutil.walk_packages(path):
-        # Sometimes when you import third-party libraries that are on your path,
-        # `pkgutil.walk_packages` returns those too, so we need to skip them.
-        if path_string and module_finder.path != path_string:
-            continue
-        subpackage = f"{package_name}.{name}"
-        import_submodules(subpackage)
+        # walk_packages only finds immediate children, so need to recurse.
+        for module_finder, name, _ in pkgutil.walk_packages(path):
+            # Sometimes when you import third-party libraries that are on your path,
+            # `pkgutil.walk_packages` returns those too, so we need to skip them.
+            if path_string and module_finder.path != path_string:
+                continue
+            subpackage = f"{package_name}.{name}"
+            import_module_and_submodules(subpackage)
 
 
 def peak_memory_mb() -> float:
@@ -438,12 +500,12 @@ def gpu_memory_mb() -> Dict[int, int]:
     Get the current GPU memory usage.
     Based on https://discuss.pytorch.org/t/access-gpu-memory-usage-in-pytorch/3192/4
 
-    Returns
-    -------
-    ``Dict[int, int]``
+    # Returns
+
+    `Dict[int, int]`
         Keys are device ids as integers.
         Values are memory usage as integers in MB.
-        Returns an empty ``dict`` if GPUs are not available.
+        Returns an empty `dict` if GPUs are not available.
     """
     try:
         result = subprocess.check_output(
@@ -458,7 +520,9 @@ def gpu_memory_mb() -> Dict[int, int]:
     except:  # noqa
         # Catch *all* exceptions, because this memory check is a nice-to-have
         # and we'd never want a training run to fail because of it.
-        logger.exception("unable to check gpu_memory_mb(), continuing")
+        logger.warning(
+            "unable to check gpu_memory_mb() due to occasional failure, continuing", exc_info=True
+        )
         return {}
 
 
@@ -481,21 +545,35 @@ def is_lazy(iterable: Iterable[A]) -> bool:
     return not isinstance(iterable, list)
 
 
-def get_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> List:
-    frozen_parameter_names = []
-    tunable_parameter_names = []
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            frozen_parameter_names.append(name)
-        else:
-            tunable_parameter_names.append(name)
-    return [frozen_parameter_names, tunable_parameter_names]
+def log_frozen_and_tunable_parameter_names(model: torch.nn.Module) -> None:
+    frozen_parameter_names, tunable_parameter_names = get_frozen_and_tunable_parameter_names(model)
+
+    logger.info("The following parameters are Frozen (without gradient):")
+    for name in frozen_parameter_names:
+        logger.info(name)
+
+    logger.info("The following parameters are Tunable (with gradient):")
+    for name in tunable_parameter_names:
+        logger.info(name)
 
 
-def dump_metrics(file_path: str, metrics: Dict[str, Any], log: bool = False) -> None:
+def get_frozen_and_tunable_parameter_names(
+    model: torch.nn.Module,
+) -> Tuple[Iterable[str], Iterable[str]]:
+    frozen_parameter_names = (
+        name for name, parameter in model.named_parameters() if not parameter.requires_grad
+    )
+    tunable_parameter_names = (
+        name for name, parameter in model.named_parameters() if parameter.requires_grad
+    )
+    return frozen_parameter_names, tunable_parameter_names
+
+
+def dump_metrics(file_path: Optional[str], metrics: Dict[str, Any], log: bool = False) -> None:
     metrics_json = json.dumps(metrics, indent=2)
-    with open(file_path, "w") as metrics_file:
-        metrics_file.write(metrics_json)
+    if file_path:
+        with open(file_path, "w") as metrics_file:
+            metrics_file.write(metrics_json)
     if log:
         logger.info("Metrics: %s", metrics_json)
 
@@ -504,24 +582,25 @@ def flatten_filename(file_path: str) -> str:
     return file_path.replace("/", "_SLASH_")
 
 
-def is_master(rank: int = None, world_size: int = None) -> bool:
+def is_master(
+    global_rank: int = None, world_size: int = None, num_procs_per_node: int = None
+) -> bool:
     """
-    Checks if the process is a "master" in a distributed process group. If a
+    Checks if the process is a "master" of its node in a distributed process group. If a
     process group is not initialized, this returns `True`.
 
-    Parameters
-    ----------
-    rank : int ( default = None )
+    # Parameters
+
+    global_rank : int ( default = None )
         Global rank of the process if in a distributed process group. If not
         given, rank is obtained using `torch.distributed.get_rank()`
     world_size : int ( default = None )
         Number of processes in the distributed group. If not
         given, this is obtained using `torch.distributed.get_world_size()`
+    num_procs_per_node: int ( default = None ),
+        Number of GPU processes running per node
     """
-    if dist.is_available():
-        distributed = dist.is_initialized()
-    else:
-        distributed = False
+    distributed = dist.is_available() and dist.is_initialized()
 
     # In non-distributed case, a "master" process doesn't make any
     # sense. So instead of raising an error, returning True would
@@ -529,23 +608,37 @@ def is_master(rank: int = None, world_size: int = None) -> bool:
     if not distributed:
         return True
 
-    if rank is None:
-        rank = dist.get_rank()
+    if global_rank is None:
+        global_rank = dist.get_rank()
 
     if world_size is None:
         world_size = dist.get_world_size()
 
+    if num_procs_per_node is None and os.environ:
+        num_procs_per_node = int(os.environ.get("ALLENNLP_PROCS_PER_NODE", world_size))
+
     # rank == 0 would do in a single-node multi-GPU setup. However,
     # in a multi-node case, every node has a logical master and hence
     # the mod(%) op.
-    return rank % world_size == 0
+    return global_rank % (world_size / num_procs_per_node) == 0
 
 
 def is_distributed() -> bool:
     """
-    Checks if the distributed process group has been initialized
+    Checks if the distributed process group is available and has been initialized
     """
-    if dist.is_available():
-        return dist.is_initialized()
+    return dist.is_available() and dist.is_initialized()
+
+
+def sanitize_wordpiece(wordpiece: str) -> str:
+    """
+    Sanitizes wordpieces from BERT, RoBERTa or ALBERT tokenizers.
+    """
+    if wordpiece.startswith("##"):
+        return wordpiece[2:]
+    elif wordpiece.startswith("Ġ"):
+        return wordpiece[1:]
+    elif wordpiece.startswith("▁"):
+        return wordpiece[1:]
     else:
-        return False
+        return wordpiece

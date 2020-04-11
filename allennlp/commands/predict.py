@@ -3,8 +3,6 @@ The ``predict`` subcommand allows you to make bulk JSON-to-JSON
 or dataset to JSON predictions using a trained model and its
 :class:`~allennlp.predictors.predictor.Predictor` wrapper.
 
-.. code-block:: bash
-
     $ allennlp predict --help
     usage: allennlp predict [-h] [--output-file OUTPUT_FILE]
                             [--weights-file WEIGHTS_FILE]
@@ -56,6 +54,8 @@ import json
 import gzip
 import tqdm
 
+from overrides import overrides
+
 from allennlp.commands.subcommand import Subcommand
 from allennlp.common.checks import check_for_gpu, ConfigurationError
 from allennlp.common.file_utils import cached_path
@@ -66,14 +66,14 @@ from allennlp.data import Instance
 from allennlp.common.file_utils import cached_path
 
 
+@Subcommand.register("predict")
 class Predict(Subcommand):
-    def add_subparser(
-        self, name: str, parser: argparse._SubParsersAction
-    ) -> argparse.ArgumentParser:
+    @overrides
+    def add_subparser(self, parser: argparse._SubParsersAction) -> argparse.ArgumentParser:
 
         description = """Run the specified model against a JSON-lines input file."""
         subparser = parser.add_parser(
-            name, description=description, help="Use a trained model to make predictions."
+            self.name, description=description, help="Use a trained model to make predictions."
         )
 
         subparser.add_argument(
