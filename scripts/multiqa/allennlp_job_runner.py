@@ -18,8 +18,9 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s
 logger = logging.getLogger(__name__)
 
 class JobRunner():
-    def __init__(self, channel, type, models_dir, resources_to_spare, DEBUG, SIM_GPUS, job_no_run_string):
+    def __init__(self, channel, type, models_dir, branch, resources_to_spare, DEBUG, SIM_GPUS, job_no_run_string):
         self._SIM_GPUS = SIM_GPUS
+        self.branch = branch
         self._DEBUG = DEBUG
         self._job_no_run_string = job_no_run_string
         if self._DEBUG:  # pylint: disable=invalid-name
@@ -437,7 +438,7 @@ class JobRunner():
 
             # performing git pull before each execution
             if not self._DEBUG:
-                call("git pull origin master", shell=True, preexec_fn=os.setsid)
+                call("git pull origin " + self.branch, shell=True, preexec_fn=os.setsid)
                 time.sleep(2)
 
             self.handle_job_types(config, name, channel)
@@ -502,6 +503,7 @@ def main():
     parser.add_argument("type", type=str, default='gpu', help="gpu/cpu")
     parser.add_argument("--channel", type=str, help="RabbitMQ channel", action='append')
     parser.add_argument("--state", type=str, default=None, help="saved runner state")
+    parser.add_argument("--branch", type=str, default="master", help="saved runner state")
     parser.add_argument("--models_dir", type=str, default='', help="debug session, runs dummy commands etc... ")
     parser.add_argument("--resources_to_spare", type=int, default=0, help="how many resources to spare in this machine ")
     parser.add_argument("--debug", type=bool, default=False, nargs='?', const=True ,help="debug session, runs dummy commands etc... ")
@@ -515,7 +517,7 @@ def main():
         runner.connect_to_queue()
         runner.reopen_all_logs()
     else:
-        runner = JobRunner(args.channel, args.type, args.models_dir, \
+        runner = JobRunner(args.channel, args.type, args.models_dir,args.branch, \
                            args.resources_to_spare, args.debug, args.simulate_gpus, args.job_no_run_string)
     runner.run()
 
