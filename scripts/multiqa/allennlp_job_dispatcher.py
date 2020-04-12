@@ -312,7 +312,7 @@ class AllenNLP_Job_Dispatcher():
         return bash_command
 
     def build_evaluate_bash_command(self, exp_config, run_name):
-        bash_command = 'python -m allennlp evaluate ' + exp_config['model'] + ' '
+        bash_command = 'python -m allennlp.run evaluate ' + exp_config['model'] + ' '
         bash_command += exp_config['eval_set'] + ' '
         bash_command += '--output-file ' + exp_config['output_file'] + ' '
         bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
@@ -324,7 +324,7 @@ class AllenNLP_Job_Dispatcher():
         return bash_command
 
     def build_train_bash_command(self, exp_config, run_name):
-        bash_command = 'python -m allennlp train ' + exp_config['master_config'] + ' '
+        bash_command = 'python -m allennlp.run train ' + exp_config['master_config'] + ' '
         bash_command += '-s ' + '[MODEL_DIR]' + run_name + ' '
         bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
         if 'include_packages' in exp_config:
@@ -336,14 +336,14 @@ class AllenNLP_Job_Dispatcher():
         return bash_command
 
     def build_dry_run_bash_command(self, exp_config, run_name):
-        bash_command = 'python -m allennlp dry-run ' + exp_config['master_config'] + ' '
+        bash_command = 'python -m allennlp.run dry-run ' + exp_config['master_config'] + ' '
         bash_command += '-s ' + '[MODEL_DIR]' + run_name + ' '
         bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
         bash_command += self.allennlp_include_packages()
         return bash_command
 
     def build_finetune_bash_command(self, exp_config, run_name):
-        bash_command = 'python -m allennlp fine-tune -m ' + exp_config['source_model_path'] + ' '
+        bash_command = 'python -m allennlp.run fine-tune -m ' + exp_config['source_model_path'] + ' '
         bash_command += '-c ' + exp_config['master_config'] + ' '
         bash_command += '-s ' + '[MODEL_DIR]' + run_name + ' '
         bash_command += '-o "' + str(exp_config['override_config']).replace('True', 'true').replace('False', 'false') + '" '
@@ -354,7 +354,7 @@ class AllenNLP_Job_Dispatcher():
         return bash_command
 
     def build_predict_bash_command(self, exp_config, run_name):
-        bash_command = 'python -m allennlp predict ' + exp_config['model'] + ' '
+        bash_command = 'python -m allennlp.run predict ' + exp_config['model'] + ' '
         bash_command += exp_config['eval_set'] + ' '
         bash_command += '--output-file ' + exp_config['output_file'] + ' '
         bash_command += '--predictor ' + exp_config['predictor'] + ' '
@@ -513,14 +513,14 @@ class AllenNLP_Job_Dispatcher():
             # TODO this is a patch to calculate the BERT scheduler t_total
             if 'bert_t_tatal_calc_train_size' in config:
                 bert_t_tatal_calc_train_size = float(self.replace_one_field_tags(config['bert_t_tatal_calc_train_size'], params))
-                exp_config['override_config']['data_loader']['batch_sampler']['batch_size'] = \
-                    self.replace_one_field_tags(exp_config['override_config']['data_loader']['batch_sampler']['batch_size'], params)
+                exp_config['override_config']['iterator']['batch_size'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['iterator']['batch_size'], params)
                 exp_config['override_config']['trainer']['num_epochs'] = \
                     self.replace_one_field_tags(exp_config['override_config']['trainer']['num_epochs'], params)
                 exp_config['override_config']['trainer']['num_gradient_accumulation_steps'] = \
                     self.replace_one_field_tags(exp_config['override_config']['trainer']['num_gradient_accumulation_steps'], params)
                 exp_config['override_config']['trainer']['optimizer']['t_total'] = \
-                    int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['data_loader']['batch_sampler']['batch_size']) \
+                    int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['iterator']['batch_size']) \
                         * float(exp_config['override_config']['trainer']['num_epochs']) \
                         / float(exp_config['override_config']['trainer']['num_gradient_accumulation_steps']))
 
@@ -529,14 +529,14 @@ class AllenNLP_Job_Dispatcher():
 
             if 'slanted_triangular_num_steps_per_epoch' in config:
                 bert_t_tatal_calc_train_size = float(self.replace_one_field_tags(config['slanted_triangular_num_steps_per_epoch'], params))
-                exp_config['override_config']['data_loader']['batch_sampler']['batch_size'] = \
-                    self.replace_one_field_tags(exp_config['override_config']['data_loader']['batch_sampler']['batch_size'], params)
+                exp_config['override_config']['iterator']['batch_size'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['iterator']['batch_size'], params)
                 exp_config['override_config']['trainer']['num_epochs'] = \
                     self.replace_one_field_tags(exp_config['override_config']['trainer']['num_epochs'], params)
                 exp_config['override_config']['trainer']['num_gradient_accumulation_steps'] = \
                     self.replace_one_field_tags(exp_config['override_config']['trainer']['num_gradient_accumulation_steps'], params)
                 exp_config['override_config']['trainer']['learning_rate_scheduler']['num_steps_per_epoch'] = \
-                    int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['data_loader']['batch_sampler']['batch_size']) \
+                    int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['iterator']['batch_size']) \
                         / float(exp_config['override_config']['trainer']['num_gradient_accumulation_steps']))
 
                 if exp_config['override_config']['trainer']['cuda_device'] == '[GPU_ID4]':
@@ -742,8 +742,8 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 # experiment_name = '096_oLMpics_LearningCurves_HP_GRID'
 
 
-# experiment_name = '098_TeachAI_train_hp_grid'
-experiment_name = '099_TeachAI_train'
+experiment_name = '098_TeachAI_train_hp_grid'
+#experiment_name = '099_TeachAI_train'
 #experiment_name = '100_TeachAI_eval'
 # experiment_name = '101_TeachAI_finetune_hp_grid'
 # experiment_name = "102_TeachAI_finetune"
@@ -754,8 +754,8 @@ experiment_name = '099_TeachAI_train'
 # queue = 'gamir'
 # queue = 'rack-gamir-g05'
 # queue = 'pc-jonathan1'
-# queue = 'rack-jonathan-g08'
-queue = 'rack-jonathan-g02'
+queue = 'rack-jonathan-g08'
+#queue = 'rack-jonathan-g02'
 # queue = 'savant'
 
 FORCE_RUN = False
