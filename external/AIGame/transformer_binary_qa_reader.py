@@ -99,9 +99,9 @@ class TransformerBinaryReader(DatasetReader):
     def transformer_features_from_qa(self, question: str, context: str):
         if self._add_prefix:
             question = "Q: " + question
-            if context is not None:
+            if context is not None and len(context) > 0:
                 context = "C: " + context
-        if context is not None:
+        if context is not None and len(context) > 0:
             tokens = self._tokenizer.tokenize_sentence_pair(question, context)
         else:
             tokens = self._tokenizer.tokenize(question)
