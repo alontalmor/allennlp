@@ -410,10 +410,8 @@ class GradientDescentTrainer(Trainer):
                         " 'loss' key in the output of model.forward(inputs)."
                     )
 
-        return loss, output_dict
+        return output_dict
 
-
-    @profile
     def _train_epoch(self, epoch: int) -> Dict[str, float]:
         """
         Trains one epoch and returns metrics.
@@ -488,7 +486,7 @@ class GradientDescentTrainer(Trainer):
 
             batch_group_outputs = []
             for batch in batch_group:
-                batch_outputs, _o = self.batch_outputs(batch, for_training=True)
+                batch_outputs = self.batch_outputs(batch, for_training=True)
                 batch_group_outputs.append(batch_outputs)
                 loss = batch_outputs["loss"]
                 reg_loss = batch_outputs["reg_loss"]
@@ -650,7 +648,7 @@ class GradientDescentTrainer(Trainer):
                     break
 
 
-            batch_outputs, _o = self.batch_outputs(batch, for_training=False)
+            batch_outputs = self.batch_outputs(batch, for_training=False)
             loss = batch_outputs.get("loss")
             reg_loss = batch_outputs.get("reg_loss")
             if loss is not None:
@@ -676,7 +674,8 @@ class GradientDescentTrainer(Trainer):
                 world_size=self._world_size,
                 cuda_device=[self.cuda_device],
             )
-            if 'best_span_str' in _o and str(type(self.model)).find('MultiQA_BERT') > -1:
+            if 'best_span_str' in batch_outputs and str(type(self.model)).find('MultiQA_BERT') > -1:
+                _o = batch_outputs
                 for best_span_str,best_span_logit, yesno_logit, qid, EM, f1 in \
                         zip(_o['best_span_str'],_o['best_span_logit'], _o['yesno_logit'],_o['qid'],_o['EM'],_o['f1']):
                     if qid not in multiqa_res or best_span_logit + yesno_logit > multiqa_res[qid]['score']:

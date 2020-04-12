@@ -123,9 +123,10 @@ class Train(Subcommand):
         )
 
         subparser.add_argument(
-            "--node-rank", type = int, default = 0, help = "Rank of this node in the distributed setup"
             "--dry-run",
             action="store_true",
+            help="do not train a model, but create a vocabulary, show dataset statistics and "
+                 "other training information",
         )
 
         subparser.set_defaults(func=train_model_from_args)
