@@ -803,7 +803,7 @@ class GradientDescentTrainer(Trainer):
             elastic_val_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
             elastic_val_metrics.update(
                 {'optimizer': str(type(self.optimizer)), 'serialization_dir': self._serialization_dir, \
-                 'target_number_of_epochs': self._num_epochs, 'iterator_type': self.iterator.default_implementation})
+                 'target_number_of_epochs': self._num_epochs})
             elastic_val_metrics.update(self.optimizer.defaults)
             elastic_val_metrics.pop('optimizer', None)
             elastic_val_metrics.pop('schedule', None)
