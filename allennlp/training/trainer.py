@@ -54,12 +54,12 @@ class Trainer(Registrable):
     default_implementation = "gradient_descent"
 
     def __init__(
-        self,
-        serialization_dir: str,
-        cuda_device: int = -1,
-        distributed: bool = False,
-        local_rank: int = 0,
-        world_size: int = 1,
+            self,
+            serialization_dir: str,
+            cuda_device: int = -1,
+            distributed: bool = False,
+            local_rank: int = 0,
+            world_size: int = 1,
     ) -> None:
 
         check_for_gpu(cuda_device)
@@ -480,9 +480,7 @@ class GradientDescentTrainer(Trainer):
             self._batch_num_total += 1
             batch_num_total = self._batch_num_total
 
-            # TODO alon change... we do zero_grad near the optimizer step
-            if batches_this_epoch == 1:
-                self.optimizer.zero_grad()
+            self.optimizer.zero_grad()
 
             batch_group_outputs = []
             for batch in batch_group:
@@ -646,7 +644,6 @@ class GradientDescentTrainer(Trainer):
                         "data is perfectly balanced."
                     )
                     break
-
 
             batch_outputs = self.batch_outputs(batch, for_training=False)
             loss = batch_outputs.get("loss")
@@ -925,7 +922,6 @@ class GradientDescentTrainer(Trainer):
         finally:
             if self._moving_average is not None:
                 self._moving_average.restore()
-
 
     def _restore_checkpoint(self) -> int:
         """
