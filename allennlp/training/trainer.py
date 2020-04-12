@@ -912,14 +912,6 @@ class GradientDescentTrainer(Trainer):
         }
 
         # If we have a learning rate or momentum scheduler, we should persist them too.
-        if self._save_best_model:
-            self._checkpointer.save_checkpoint(
-                model_state=self.model.state_dict(),
-                epoch=epoch,
-                training_states=training_states,
-                is_best_so_far=self._metric_tracker.is_best_so_far(),
-            )
-
         if self._learning_rate_scheduler is not None:
             training_states["learning_rate_scheduler"] = self._learning_rate_scheduler.state_dict()
         if self._momentum_scheduler is not None:

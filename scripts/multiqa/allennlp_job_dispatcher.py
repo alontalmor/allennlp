@@ -513,14 +513,14 @@ class AllenNLP_Job_Dispatcher():
             # TODO this is a patch to calculate the BERT scheduler t_total
             if 'bert_t_tatal_calc_train_size' in config:
                 bert_t_tatal_calc_train_size = float(self.replace_one_field_tags(config['bert_t_tatal_calc_train_size'], params))
-                exp_config['override_config']['iterator']['batch_size'] = \
-                    self.replace_one_field_tags(exp_config['override_config']['iterator']['batch_size'], params)
+                exp_config['override_config']['data_loader']['batch_sampler']['batch_size'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['data_loader']['batch_sampler']['batch_size'], params)
                 exp_config['override_config']['trainer']['num_epochs'] = \
                     self.replace_one_field_tags(exp_config['override_config']['trainer']['num_epochs'], params)
                 exp_config['override_config']['trainer']['num_gradient_accumulation_steps'] = \
                     self.replace_one_field_tags(exp_config['override_config']['trainer']['num_gradient_accumulation_steps'], params)
                 exp_config['override_config']['trainer']['optimizer']['t_total'] = \
-                    int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['iterator']['batch_size']) \
+                    int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['data_loader']['batch_sampler']['batch_size']) \
                         * float(exp_config['override_config']['trainer']['num_epochs']) \
                         / float(exp_config['override_config']['trainer']['num_gradient_accumulation_steps']))
 
@@ -529,14 +529,14 @@ class AllenNLP_Job_Dispatcher():
 
             if 'slanted_triangular_num_steps_per_epoch' in config:
                 bert_t_tatal_calc_train_size = float(self.replace_one_field_tags(config['slanted_triangular_num_steps_per_epoch'], params))
-                exp_config['override_config']['iterator']['batch_size'] = \
-                    self.replace_one_field_tags(exp_config['override_config']['iterator']['batch_size'], params)
+                exp_config['override_config']['data_loader']['batch_sampler']['batch_size'] = \
+                    self.replace_one_field_tags(exp_config['override_config']['data_loader']['batch_sampler']['batch_size'], params)
                 exp_config['override_config']['trainer']['num_epochs'] = \
                     self.replace_one_field_tags(exp_config['override_config']['trainer']['num_epochs'], params)
                 exp_config['override_config']['trainer']['num_gradient_accumulation_steps'] = \
                     self.replace_one_field_tags(exp_config['override_config']['trainer']['num_gradient_accumulation_steps'], params)
                 exp_config['override_config']['trainer']['learning_rate_scheduler']['num_steps_per_epoch'] = \
-                    int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['iterator']['batch_size']) \
+                    int(bert_t_tatal_calc_train_size / float(exp_config['override_config']['data_loader']['batch_sampler']['batch_size']) \
                         / float(exp_config['override_config']['trainer']['num_gradient_accumulation_steps']))
 
                 if exp_config['override_config']['trainer']['cuda_device'] == '[GPU_ID4]':
