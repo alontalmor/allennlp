@@ -35,7 +35,7 @@ class TransformerBinaryQA(Model):
                  regularizer: Optional[RegularizerApplicator] = None) -> None:
         super().__init__(vocab, regularizer)
 
-        self._predictions_file = predictions_file
+        self._predictions = []
 
         self._pretrained_model = pretrained_model
 
@@ -136,18 +136,31 @@ class TransformerBinaryQA(Model):
             loss = self._loss(label_logits, label)
             self._accuracy(label_logits, label)
             output_dict["loss"] = loss# TODO this is shortcut to get predictions fast..
-        if self._predictions_file is not None:# and not self.training:
-            with open(self._predictions_file, 'a') as f:
-                for e, example in enumerate(metadata):
-                    logits = sanitize(label_logits[e, :])
-                    prediction = sanitize(output_dict['answer_index'][e])
-                    f.write(json.dumps({'id': example['id'], \
-                                        'phrase': example['question_text' ], \
-                                        'context': example['context'], \
-                                        'logits': logits,
-                                        'answer': example['correct_answer_index'],
-                                        'prediction': prediction,
-                                        'is_correct': (example['correct_answer_index'] == prediction) * 1.0}) + '\n')
+
+
+            for e, example in enumerate(metadata):
+                logits = sanitize(label_logits[e, :])
+                prediction = sanitize(output_dict['answer_index'][e])
+                self._predictions.append({'id': example['id'], \
+                                    'phrase': example['question_text'], \
+                                    'context': example['context'], \
+                                    'logits': logits,
+                                    'answer': example['correct_answer_index'],
+                                    'prediction': prediction,
+                                    'is_correct': (example['correct_answer_index'] == prediction) * 1.0})
+
+        #if self._predictions_file is not None:# and not self.training:
+        #    with open(self._predictions_file, 'a') as f:
+        #        for e, example in enumerate(metadata):
+        #            logits = sanitize(label_logits[e, :])
+        #            prediction = sanitize(output_dict['answer_index'][e])
+        #            f.write(json.dumps({'id': example['id'], \
+        #                                'phrase': example['question_text' ], \
+        #                                'context': example['context'], \
+        #                                'logits': logits,
+        #                                'answer': example['correct_answer_index'],
+        #                                'prediction': prediction,
+        #                                'is_correct': (example['correct_answer_index'] == prediction) * 1.0}) + '\n')
 
 
 
@@ -155,7 +168,13 @@ class TransformerBinaryQA(Model):
 
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        return {
-            'EM': self._accuracy.get_metric(reset),
-        }
+        if reset == True:
+            return {
+                'EM': self._accuracy.get_metric(reset),
+                'predictions': self._predictions,
+            }
+        else:
+            return {
+                'EM': self._accuracy.get_metric(reset),
+            }
 
