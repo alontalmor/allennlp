@@ -168,13 +168,13 @@ class TransformerBinaryQA(Model):
 
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        if reset == True and not self.training:
-            return {
-                'EM': self._accuracy.get_metric(reset),
-                'predictions': self._predictions,
-            }
-        else:
-            return {
-                'EM': self._accuracy.get_metric(reset),
-            }
+        #if reset == True and not self.training:
+        #    return {
+        #        'EM': self._accuracy.get_metric(reset),
+        #        'predictions': self._predictions,
+        #    }
+        #else:
+        return {
+            'EM': self._accuracy.get_metric(reset),
+        }
 
