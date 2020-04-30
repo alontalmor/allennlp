@@ -787,7 +787,6 @@ class GradientDescentTrainer(Trainer):
                         logger.info("Ran out of patience.  Stopping training.")
                         break
 
-            # ALON - no need for this logger...
             if self._master and False:
                 self._tensorboard.log_metrics(
                     train_metrics, val_metrics=val_metrics, log_to_console=True, epoch=epoch + 1

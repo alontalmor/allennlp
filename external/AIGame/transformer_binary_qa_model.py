@@ -146,8 +146,8 @@ class TransformerBinaryQA(Model):
                                     #'context': example['context'], \
                                     'logits': logits,
                                     #'answer': example['correct_answer_index'],
-                                    'prediction': prediction})
-                                    #'is_correct': (example['correct_answer_index'] == prediction) * 1.0})
+                                    'prediction': prediction,
+                                    'is_correct': (example['correct_answer_index'] == prediction) * 1.0})
 
         #if self._predictions_file is not None:# and not self.training:
         #    with open(self._predictions_file, 'a') as f:
@@ -168,13 +168,13 @@ class TransformerBinaryQA(Model):
 
 
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
-        #if reset == True and not self.training:
-        #    return {
-        #        'EM': self._accuracy.get_metric(reset),
-        #        'predictions': self._predictions,
-        #    }
-        #else:
-        return {
-            'EM': self._accuracy.get_metric(reset),
-        }
+        if reset == True and not self.training:
+            return {
+                'EM': self._accuracy.get_metric(reset),
+                'predictions': self._predictions,
+            }
+        else:
+            return {
+                'EM': self._accuracy.get_metric(reset),
+            }
 

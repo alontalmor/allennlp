@@ -550,7 +550,7 @@ class TrainModel(Registrable):
                 "'evaluate_on_test' flag, or use the 'allennlp evaluate' command."
             )
         common_util.dump_metrics(
-            os.path.join(self.serialization_dir, "metrics.json"), metrics, log=True
+            os.path.join(self.serialization_dir, "metrics.json"), metrics, log=False
         )
 
     @classmethod
