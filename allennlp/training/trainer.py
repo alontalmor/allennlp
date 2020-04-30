@@ -882,6 +882,8 @@ class GradientDescentTrainer(Trainer):
 
         # ALON last epoch saving results to a file ...
         elastic_val_metrics.update(metrics)
+        if 'prediction' in elastic_val_metrics:
+            del elastic_val_metrics['prediction']
         if 'best_validation_EM' in elastic_val_metrics:
             elastic_val_metrics['EM'] = elastic_val_metrics['best_validation_EM']
         if 'best_validation_f1' in elastic_val_metrics:
