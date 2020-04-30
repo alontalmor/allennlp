@@ -796,8 +796,8 @@ class GradientDescentTrainer(Trainer):
             # Training logs are saved in training and validation under the training final results
 
             elastic_val_metrics = val_metrics.copy()
-            if 'prediction' in elastic_val_metrics:
-                del elastic_val_metrics['prediction']
+            if 'predictions' in elastic_val_metrics:
+                del elastic_val_metrics['predictions']
             elastic_val_metrics = {'validation/' + k: v for k, v in elastic_val_metrics.items()}
             elastic_val_metrics.update({'epoch': epoch, 'gpu': self.cuda_device})
             elastic_val_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})
@@ -882,8 +882,8 @@ class GradientDescentTrainer(Trainer):
 
         # ALON last epoch saving results to a file ...
         elastic_val_metrics.update(metrics)
-        if 'prediction' in elastic_val_metrics:
-            del elastic_val_metrics['prediction']
+        if 'predictions' in elastic_val_metrics:
+            del elastic_val_metrics['predictions']
         if 'best_validation_EM' in elastic_val_metrics:
             elastic_val_metrics['EM'] = elastic_val_metrics['best_validation_EM']
         if 'best_validation_f1' in elastic_val_metrics:
