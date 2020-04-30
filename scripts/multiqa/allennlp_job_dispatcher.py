@@ -743,8 +743,8 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 
 
 #experiment_name = '098_TeachAI_train_hp_grid'
-experiment_name = '099_TeachAI_train'
-#experiment_name = '100_TeachAI_eval'
+#experiment_name = '099_TeachAI_train'
+experiment_name = '100_TeachAI_eval'
 # experiment_name = '101_TeachAI_finetune_hp_grid'
 # experiment_name = "102_TeachAI_finetune"
 #experiment_name = '103_TeachAI_train_hp_grid_new'

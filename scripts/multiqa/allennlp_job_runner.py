@@ -55,7 +55,7 @@ class JobRunner():
                 gpu_mem = {(3 - key): val for key, val in gpu_mem.items()}
 
             self.available_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if
-                                    gpu_mem[gpu] >= 300 and gpu_mem[gpu] < 1000 and i not in self.job_gpus]
+                                    gpu_mem[gpu] >= 300 and gpu_mem[gpu] < 2000 and i not in self.job_gpus]
             self.available_gpus += [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 300 and i not in self.job_gpus]
 
         except:
