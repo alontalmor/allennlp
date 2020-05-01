@@ -183,6 +183,6 @@ def evaluate_from_args(args: argparse.Namespace) -> Dict[str, Any]:
 
     logger.info("Finished evaluating.")
 
-    dump_metrics(args.output_file, metrics, log=True)
+    dump_metrics(args.output_file, metrics, log=False)
 
     return metrics
