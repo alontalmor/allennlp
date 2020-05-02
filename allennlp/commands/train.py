@@ -712,7 +712,7 @@ class TrainModel(Registrable):
         # Now tar up results
         if not dont_save_best_model:
             archive_model(serialization_dir, files_to_archive=params.files_to_archive)
-        dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=True)
+        dump_metrics(os.path.join(serialization_dir, "metrics.json"), metrics, log=False)
 
         if not distributed:
             return trainer.model

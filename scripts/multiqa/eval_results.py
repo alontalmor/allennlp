@@ -114,7 +114,7 @@ def process_results(args):
 
     for field in args._get_kwargs():
         results_dict[field[0]] = field[1]
-    ElasticLogger().write_log('INFO', 'EvalResults', context_dict=results_dict)
+
 
     if args.predictions_file is not None:
         if args.eval_path is not None:
@@ -125,6 +125,10 @@ def process_results(args):
             # uploading to cloud
             command = "aws s3 cp " + args.predictions_file + " " + args.prediction_path + " --acl public-read"
             Popen(command, shell=True, preexec_fn=os.setsid)
+
+        if 'predictions' in results_dict:
+            del results_dict['predictions']
+        ElasticLogger().write_log('INFO', 'EvalResults', context_dict=results_dict)
 
 def main():
     parse = argparse.ArgumentParser("Pre-process for DocumentQA/MultiQA model and datareader")

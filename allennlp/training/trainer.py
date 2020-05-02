@@ -542,6 +542,8 @@ class GradientDescentTrainer(Trainer):
             # Alon addition - elastic logs - this is a huge Patch ... sorry didn't have time to change this before ACL ..
             # Training logs are saved in training and validation under the training final results
             elastic_metrics = metrics.copy()
+            if 'predictions' in elastic_metrics:
+                del elastic_metrics['predictions']
             elastic_train_metrics = {'epoch_metrics/'+key:elastic_metrics[key] for key in elastic_metrics}
             elastic_train_metrics.update({'batch_num_total': batch_num_total, 'gpu': self.cuda_device})
             elastic_train_metrics.update({'experiment_name': '/'.join(self._serialization_dir.split('/')[-2:])})

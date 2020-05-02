@@ -461,10 +461,14 @@ class AllenNLP_Job_Dispatcher():
         else:
             config['override_config'] = {}
 
-        currently_running_experiments = self.get_running_experiments()
-        elastic_exp_results = []
-        if job_type == 'evaluate':
-            elastic_exp_results = self.get_elastic_evaluate_exp_results(experiment_name)
+        if not FORCE_RUN:
+            currently_running_experiments = self.get_running_experiments()
+        else:
+            currently_running_experiments = []
+        if not FORCE_RUN:
+            elastic_exp_results = []
+            if job_type == 'evaluate':
+                elastic_exp_results = self.get_elastic_evaluate_exp_results(experiment_name)
 
         experiments = self.build_experiments_params(config)
 
@@ -760,7 +764,7 @@ queue = 'rack-jonathan-g02'
 #queue = 'savant'
 #queue = 'google_cloud1'
 
-FORCE_RUN = False
+FORCE_RUN = True
 SHOW_MISSING_RESOURCES = True
 run_only_one = False
 
