@@ -18,7 +18,8 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s - %(message)s
 logger = logging.getLogger(__name__)
 
 class JobRunner():
-    def __init__(self, channel, type, models_dir, branch, resources_to_spare, DEBUG, SIM_GPUS, job_no_run_string):
+    def __init__(self, channel, type, models_dir, branch, resources_to_spare, DEBUG, SIM_GPUS, job_no_run_string, min_gpu_memory):
+        self._min_gpu_memory = min_gpu_memory
         self._SIM_GPUS = SIM_GPUS
         self.branch = branch
         self._DEBUG = DEBUG
@@ -55,7 +56,7 @@ class JobRunner():
                 gpu_mem = {(3 - key): val for key, val in gpu_mem.items()}
 
             self.available_gpus = [i for i, gpu in enumerate(gpu_mem.keys()) if
-                                    gpu_mem[gpu] >= 300 and gpu_mem[gpu] < 2000 and i not in self.job_gpus]
+                                    gpu_mem[gpu] >= 300 and gpu_mem[gpu] < self._min_gpu_memory and i not in self.job_gpus]
             self.available_gpus += [i for i, gpu in enumerate(gpu_mem.keys()) if gpu_mem[gpu] < 300 and i not in self.job_gpus]
 
         except:
@@ -509,6 +510,7 @@ def main():
     parser.add_argument("--debug", type=bool, default=False, nargs='?', const=True ,help="debug session, runs dummy commands etc... ")
     parser.add_argument("--simulate_gpus", type=bool, default=False, nargs='?', const=True, help="debug session, runs dummy commands etc... ")
     parser.add_argument("--job_no_run_string", type=str, default='', help="debug session, runs dummy commands etc... ")
+    parser.add_argument("--min_gpu_memory", type=int, default=2000, help="debug session, runs dummy commands etc... ")
     args = parser.parse_args()
 
     if args.state is not None:
@@ -518,7 +520,7 @@ def main():
         runner.reopen_all_logs()
     else:
         runner = JobRunner(args.channel, args.type, args.models_dir,args.branch, \
-                           args.resources_to_spare, args.debug, args.simulate_gpus, args.job_no_run_string)
+                           args.resources_to_spare, args.debug, args.simulate_gpus, args.job_no_run_string, args.min_gpu_memory)
     runner.run()
 
 if __name__ == '__main__':
