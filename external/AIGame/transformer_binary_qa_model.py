@@ -141,13 +141,19 @@ class TransformerBinaryQA(Model):
             for e, example in enumerate(metadata):
                 logits = sanitize(label_logits[e, :])
                 prediction = sanitize(output_dict['answer_index'][e])
-                self._predictions.append({'id': example['id'], \
-                                    'phrase': example['question_text'], \
-                                    'context': example['context'], \
-                                    'logits': logits,
-                                    'answer': example['correct_answer_index'],
-                                    'prediction': prediction,
-                                    'is_correct': (example['correct_answer_index'] == prediction) * 1.0})
+                prediction_dict = {'id': example['id'], \
+                                   'phrase': example['question_text'], \
+                                   'context': example['context'], \
+                                   'logits': logits,
+                                   'answer': example['correct_answer_index'],
+                                   'prediction': prediction,
+                                   'is_correct': (example['correct_answer_index'] == prediction) * 1.0}
+
+                if 'skills' in example:
+                    prediction_dict['skills'] = example['skills']
+                if 'tags' in example:
+                    prediction_dict['tags'] = example['tags']
+                self._predictions.append(prediction_dict)
 
         #if self._predictions_file is not None:# and not self.training:
         #    with open(self._predictions_file, 'a') as f:

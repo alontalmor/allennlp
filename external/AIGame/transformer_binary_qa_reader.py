@@ -61,13 +61,15 @@ class TransformerBinaryReader(DatasetReader):
             item_id = item_json["id"]
 
             statement_text = item_json["phrase"]
+            metadata = item_json["metadata"]
             context = item_json["context"] if "context" in item_json else None
 
             yield self.text_to_instance(
                     item_id=item_id,
                     question=statement_text,
                     answer_id=item_json["answer"],
-                    context = context)
+                    context = context,
+                    org_metadata =metadata)
 
         data_file.close()
 
@@ -76,7 +78,8 @@ class TransformerBinaryReader(DatasetReader):
                          item_id: str,
                          question: str,
                          answer_id: int = None,
-                         context: str = None) -> Instance:
+                         context: str = None,
+                         org_metadata: dict = {}) -> Instance:
         fields: Dict[str, Field] = {}
         qa_tokens = self.transformer_features_from_qa(question, context)
         qa_field = TextField(qa_tokens, self._token_indexers)
@@ -84,16 +87,23 @@ class TransformerBinaryReader(DatasetReader):
         fields['phrase'] = qa_field
         if answer_id is not None:
             fields['label'] = LabelField(answer_id, skip_indexing=True)
-        metadata = {
+        new_metadata = {
             "id": item_id,
             "question_text": question,
             "context": context,
             "correct_answer_index": answer_id
         }
+
+        # TODO Alon get rid of this in production...
+        if 'skills' in org_metadata:
+            new_metadata.update({'skills': org_metadata['skills']})
+        if 'tags' in org_metadata:
+            new_metadata.update({'tags': org_metadata['tags']})
+
         if self._debug_prints >= 0:
             logger.info(f"Tokens: {qa_tokens}")
             logger.info(f"Label: {answer_id}")
-        fields["metadata"] = MetadataField(metadata)
+        fields["metadata"] = MetadataField(new_metadata)
         return Instance(fields)
 
     def transformer_features_from_qa(self, question: str, context: str):
