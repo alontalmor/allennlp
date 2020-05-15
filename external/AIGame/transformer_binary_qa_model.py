@@ -140,11 +140,13 @@ class TransformerBinaryQA(Model):
 
             for e, example in enumerate(metadata):
                 logits = sanitize(label_logits[e, :])
+                label_probs = sanitize(output_dict['label_probs'][e, :])
                 prediction = sanitize(output_dict['answer_index'][e])
                 prediction_dict = {'id': example['id'], \
                                    'phrase': example['question_text'], \
                                    'context': example['context'], \
                                    'logits': logits,
+                                   'label_probs': label_probs,
                                    'answer': example['correct_answer_index'],
                                    'prediction': prediction,
                                    'is_correct': (example['correct_answer_index'] == prediction) * 1.0}
