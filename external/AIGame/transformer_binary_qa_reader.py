@@ -61,7 +61,7 @@ class TransformerBinaryReader(DatasetReader):
             item_id = item_json["id"]
 
             statement_text = item_json["phrase"]
-            metadata = item_json["metadata"]
+            metadata = {} if "metadata" not in item_json else item_json["metadata"]
             context = item_json["context"] if "context" in item_json else None
 
             yield self.text_to_instance(
