@@ -113,7 +113,7 @@ class TransformerBinaryReader(DatasetReader):
 
         if answer_id is not None:
             fields['label'] = LabelField(answer_id, skip_indexing=True)
-        metadata = {
+        new_metadata = {
             "id": item_id,
             "question_text": question,
             "context": context,
