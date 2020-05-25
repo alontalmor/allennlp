@@ -129,7 +129,7 @@ class TransformerBinaryReader(DatasetReader):
         if self._debug_prints >= 0:
             logger.info(f"Tokens: {qa_tokens}")
             logger.info(f"Label: {answer_id}")
-        fields["metadata"] = MetadataField(metadata)
+        fields["metadata"] = MetadataField(new_metadata)
         return Instance(fields)
 
     def transformer_features_from_qa(self, question: str, context: str):
