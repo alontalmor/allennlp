@@ -73,9 +73,15 @@
         }
     },
     "data_loader": {
-      "batch_size": 16,
-      "shuffle": false
+          "batch_sampler": {
+            "type": "bucket",
+            "batch_size": 16
+          }
     },
+    //"data_loader": {
+    //  "batch_size": 16,
+    //  "shuffle": false
+    //},
     "trainer": {
         "optimizer": {
             "type": "adam",
