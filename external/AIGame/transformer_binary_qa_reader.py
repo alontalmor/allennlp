@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, Optional
 import json
 import logging
 import gzip
@@ -12,26 +12,42 @@ from allennlp.data.dataset_readers.dataset_reader import DatasetReader
 from allennlp.data.fields import Field, TextField, LabelField
 from allennlp.data.fields import ListField, MetadataField, SequenceLabelField
 from allennlp.data.instance import Instance
-from allennlp.data.token_indexers import PretrainedTransformerIndexer
-from allennlp.data.tokenizers import PretrainedTransformerTokenizer
+from allennlp.data.token_indexers import PretrainedTransformerIndexer, SingleIdTokenIndexer, TokenIndexer
+from allennlp.data.tokenizers import Tokenizer, PretrainedTransformerTokenizer, SpacyTokenizer
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+
 @DatasetReader.register("transformer_binary_qa")
 class TransformerBinaryReader(DatasetReader):
+    """
+    Supports reading artisets for both transformer models (e.g., pretrained_model="roberta-base" and
+    combine_input_fields=True) and NLI models with separate premise and hypothesis (set combine_input_fields=False).
+    Empty contexts (premises) are replaced by "N/A" in the NLI case.
+    max_pieces and add_prefix only apply to transformer models
+    """
+
     def __init__(self,
-                 pretrained_model: str,
+                 pretrained_model: str = None,
+                 tokenizer: Optional[Tokenizer] = None,
+                 token_indexers: Dict[str, TokenIndexer] = None,
                  max_pieces: int = 512,
                  add_prefix: bool = False,
+                 combine_input_fields: bool = True,
                  sample: int = -1) -> None:
         super().__init__()
 
-        self._tokenizer = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
-        token_indexer = PretrainedTransformerIndexer(pretrained_model)
-        self._token_indexers = {'tokens': token_indexer}
+        if pretrained_model != None:
+            self._tokenizer = PretrainedTransformerTokenizer(pretrained_model, max_length=max_pieces)
+            token_indexer = PretrainedTransformerIndexer(pretrained_model)
+            self._token_indexers = {'tokens': token_indexer}
+        else:
+            self._tokenizer = tokenizer or SpacyTokenizer()
+            self._token_indexers = token_indexers or {"tokens": SingleIdTokenIndexer()}
 
         self._sample = sample
         self._add_prefix = add_prefix
+        self._combine_input_fields = combine_input_fields
         self._debug_prints = -1
 
     @overrides
@@ -53,7 +69,7 @@ class TransformerBinaryReader(DatasetReader):
             item_jsons = random.sample(item_jsons, self._sample)
             logger.info("Sampling %d examples", self._sample)
 
-        for item_json in Tqdm.tqdm(item_jsons,total=len(item_jsons)):
+        for item_json in Tqdm.tqdm(item_jsons, total=len(item_jsons)):
             self._debug_prints -= 1
             if self._debug_prints >= 0:
                 logger.info(f"====================================")
@@ -81,13 +97,23 @@ class TransformerBinaryReader(DatasetReader):
                          context: str = None,
                          org_metadata: dict = {}) -> Instance:
         fields: Dict[str, Field] = {}
-        qa_tokens = self.transformer_features_from_qa(question, context)
-        qa_field = TextField(qa_tokens, self._token_indexers)
+        if self._combine_input_fields:
+            qa_tokens = self.transformer_features_from_qa(question, context)
+            qa_field = TextField(qa_tokens, self._token_indexers)
+            fields['phrase'] = qa_field
+        else:
+            premise = context
+            if context == "":
+                premise = "N/A"
+            premise_tokens = self._tokenizer.tokenize(premise)
+            hypothesis_tokens = self._tokenizer.tokenize(question)
+            qa_tokens = [premise_tokens, hypothesis_tokens]
+            fields["premise"] = TextField(premise_tokens, self._token_indexers)
+            fields["hypothesis"] = TextField(hypothesis_tokens, self._token_indexers)
 
-        fields['phrase'] = qa_field
         if answer_id is not None:
             fields['label'] = LabelField(answer_id, skip_indexing=True)
-        new_metadata = {
+        metadata = {
             "id": item_id,
             "question_text": question,
             "context": context,
@@ -103,7 +129,7 @@ class TransformerBinaryReader(DatasetReader):
         if self._debug_prints >= 0:
             logger.info(f"Tokens: {qa_tokens}")
             logger.info(f"Label: {answer_id}")
-        fields["metadata"] = MetadataField(new_metadata)
+        fields["metadata"] = MetadataField(metadata)
         return Instance(fields)
 
     def transformer_features_from_qa(self, question: str, context: str):
