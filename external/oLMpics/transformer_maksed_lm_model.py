@@ -195,7 +195,7 @@ class TransformerMaskedLMModel(Model):
                                         'prediction': example['choice_text_list'][pred_ind],
                                         'is_correct': (example['correct_answer_index'] == pred_ind) * 1.0}) + '\n')
 
-        self._accuracy(label_logits, label)
+        self._accuracy(label_logits.cpu(), label)
         output_dict["loss"] = loss
 
         if self._debug > 0:

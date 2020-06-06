@@ -789,7 +789,7 @@ experiment_name = '107_oLMpics_LearningCurves_MLM'
 
 FORCE_RUN = True
 SHOW_MISSING_RESOURCES = True
-run_only_one = False
+run_only_one = True
 
 print('Running new job on queue = %s', queue)
 allennlp_dispatcher.run_job(experiment_name, args.DRY_RUN, queue, FORCE_RUN, run_only_one)
