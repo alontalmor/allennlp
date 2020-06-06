@@ -151,7 +151,7 @@ class TransformerMaskedLMModel(Model):
                 metadata: List[Dict[str, Any]] = None) -> torch.Tensor:
 
         self._debug -= 1
-        input_ids = phrase['tokens']
+        input_ids = phrase['tokens']['token_ids']
         masked_labels[(masked_labels == 0)] = -1
 
         batch_size = input_ids.size(0)

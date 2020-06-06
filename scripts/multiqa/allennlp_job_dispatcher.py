@@ -196,6 +196,8 @@ class AllenNLP_Job_Dispatcher():
         exp_config['output_file'] = exp_config['output_file'].replace('[RUN_NAME]', run_name)
         exp_config['output_file_cloud_target'] = exp_config['output_file_cloud_target'].replace('[EXP_NAME]', experiment_name)
         exp_config['output_file_cloud_target'] = exp_config['output_file_cloud_target'].replace('[DATASET]', dataset)
+        exp_config['output_file_cloud_target'] = exp_config['output_file_cloud_target'].replace('[DATE]',
+                                                                                                datetime.today().strftime('%Y-%m-%d'))
 
         if 'source_model_path' in exp_config:
             exp_config['source_model_path'] = exp_config['source_model_path'].replace('[SOURCE]', source_dataset)
@@ -227,6 +229,7 @@ class AllenNLP_Job_Dispatcher():
             if 'output_file_cloud' in exp_config:
                 exp_config['output_file_cloud'] = \
                     exp_config['output_file_cloud'].replace('[' + key + ']', str(params[key]))
+                exp_config['output_file_cloud'] = exp_config['output_file_cloud'].replace('[DATE]', datetime.datetime.today().strftime('%Y-%m-%d'))
         return exp_config
 
     def replace_one_field_tags(self, value, params):
@@ -242,6 +245,8 @@ class AllenNLP_Job_Dispatcher():
                 else:
                     value = value.replace(r"'[" + key + "]'", str(params[key]))
                     value = value.replace('[' + key + ']', str(params[key]))
+
+
 
         return value
 
@@ -497,7 +502,9 @@ class AllenNLP_Job_Dispatcher():
             run_name = run_name_no_date + '_' + datetime.datetime.now().strftime("%m%d_%H%M")
             params['RUN_NAME'] = run_name
             if 'output_file_cloud' in exp_config:
-                params['OUTPUT_FILE_CLOUD'] = self.replace_one_field_tags(exp_config['output_file_cloud'], params)
+                output_file_cloud = self.replace_one_field_tags(exp_config['output_file_cloud'], params)
+                output_file_cloud = output_file_cloud.replace('[DATE]', datetime.datetime.today().strftime('%Y-%m-%d'))
+                params['OUTPUT_FILE_CLOUD'] = output_file_cloud
             if 'source_model_path' in exp_config:
                 exp_config['source_model_path'] = self.replace_one_field_tags(exp_config['source_model_path'], params)
             exp_config = self.replace_tag_params(exp_config, params)
@@ -748,19 +755,35 @@ allennlp_dispatcher = AllenNLP_Job_Dispatcher(experiment_name)
 
 #experiment_name = '098_TeachAI_train_hp_grid'
 #experiment_name = '099_TeachAI_train'
-experiment_name = '100_TeachAI_eval'
+#experiment_name = '100_TeachAI_eval'
+#experiment_name = '103_TeachAI_ESIM_train'
 # experiment_name = '101_TeachAI_finetune_hp_grid'
 # experiment_name = "102_TeachAI_finetune"
 #experiment_name = '103_TeachAI_train_hp_grid_new'
+#experiment_name = '104_TeachAI_paper_eval'
+#experiment_name = '105_TeachAI_test_eval'
+
+# experiment_name = '068_oLMpics_LearningCurves'
+experiment_name = '107_oLMpics_LearningCurves_MLM'
+# experiment_name = '069_oLMpics_LearningCurves_MASKED_lowerbound_baseline'
+# experiment_name = '089_oLMpics_train_triplets'
+# experiment_name = '090_oLMpics_finetuned_LearningCurves'
+# experiment_name = '091_oLMpics_train_on_challenge'
+# experiment_name = '092_oLMpics_train_non_transformer'
+# experiment_name = '093_oLMpics_finetune_LC_non_transformer'
+# experiment_name = '094_oLMpics_train_LC_non_transformer'
+# experiment_name = '095_oLMpics_zeroshot_eval'
+# experiment_name = '096_oLMpics_LearningCurves_HP_GRID'
 
 # if experiment_name.find('BERTLarge') > -1 and experiment_name.find('evaluate') == -1:
-# queue = '4GPUs'
+# queue = '4GPUs'is_correct
 # queue = 'V100'
-# queue = 'gamir'
-# queue = 'rack-gamir-g05'
+#queue = 'gamir'
+#queue = 'rack-gamir-g04'
 # queue = 'pc-jonathan1'
-#queue = 'rack-jonathan-g08'
-queue = 'rack-jonathan-g02'
+#queue = 'rack-jonathan-g05'
+#queue = 'rack-jonathan-g07'
+#queue = 'rack-jonathan-g02'
 #queue = 'savant'
 #queue = 'google_cloud1'
 

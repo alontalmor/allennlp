@@ -34,7 +34,7 @@ class TransformerMCQAReader(DatasetReader):
         super().__init__()
 
         self._tokenizer = PretrainedTransformerTokenizer(pretrained_model)
-        self._tokenizer_internal = self._tokenizer._tokenizer
+        self._tokenizer_internal = self._tokenizer.tokenizer
         token_indexer = PretrainedTransformerIndexer(pretrained_model)
         self._token_indexers = {'tokens': token_indexer}
 

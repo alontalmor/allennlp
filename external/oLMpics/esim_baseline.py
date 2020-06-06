@@ -14,7 +14,8 @@ from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, MatrixAttention
 from allennlp.modules.matrix_attention import DotProductMatrixAttention
-from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
+# SimilarityFunction
 from allennlp.modules.token_embedders import Embedding, ElmoTokenEmbedder
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, masked_softmax, weighted_sum, replace_masked_values
@@ -82,7 +83,7 @@ class ESIM(Model):
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
-                 similarity_function: SimilarityFunction,
+                 #similarity_function: SimilarityFunction,
                  projection_feedforward: FeedForward,
                  inference_encoder: Seq2SeqEncoder,
                  output_feedforward: FeedForward,

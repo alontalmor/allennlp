@@ -35,7 +35,6 @@ class TransformerMaskedLMReader(DatasetReader):
 
         self._tokenizer = PretrainedTransformerTokenizer(pretrained_model)
         self._tokenizer_no_special_tokens = PretrainedTransformerTokenizer(pretrained_model, add_special_tokens=False)
-        self._tokenizer_internal = self._tokenizer._tokenizer
         token_indexer = PretrainedTransformerIndexer(pretrained_model)
         self._token_indexers = {'tokens': token_indexer}
 
@@ -183,7 +182,7 @@ class TransformerMaskedLMReader(DatasetReader):
         question_tokens = self._tokenizer.tokenize(question)
 
         choice_tokens = [answer]
-        choice_ids = self._tokenizer_no_special_tokens._tokenizer.encode('a ' + answer, add_special_tokens=False)[1:]
+        choice_ids = self._tokenizer_no_special_tokens.tokenizer.encode('a ' + answer, add_special_tokens=False)[1:]
 
         if len(choice_ids) > 1:
             logger.error('more than one word-piece answer!')
@@ -192,7 +191,7 @@ class TransformerMaskedLMReader(DatasetReader):
         segment_ids = []
         current_segment = 0
         # Alon, if the question is empty don't add seprators.
-        masked_tokens = [(i, t) for i, t in enumerate(question_tokens) if t.text == self._tokenizer._tokenizer.mask_token]
+        masked_tokens = [(i, t) for i, t in enumerate(question_tokens) if t.text == self._tokenizer.tokenizer.mask_token]
 
         if len(masked_tokens) > 0:
             tokens += question_tokens

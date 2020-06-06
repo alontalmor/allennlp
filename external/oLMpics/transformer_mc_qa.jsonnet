@@ -31,13 +31,15 @@ local cuda_device = 0;
     "type": "transformer_mc_qa",
     "pretrained_model": transformer_model
   },
-  "iterator": {
-    "type": "basic",
-    "batch_size": batch_size
-  },
+  "data_loader": {
+        "batch_sampler": {
+          "type": "bucket",
+          "batch_size": batch_size
+        }
+    },
   "trainer": {
     "optimizer": {
-      "type": "adam_w",
+      "type": "huggingface_adamw",
       "weight_decay": weight_decay,
       "betas": [0.9, 0.98],
       "parameter_groups": [[["bias", "LayerNorm\\.weight", "layer_norm\\.weight"], {"weight_decay": 0}]],
@@ -50,8 +52,8 @@ local cuda_device = 0;
       "num_steps_per_epoch": std.ceil(train_size / batch_size /  gradient_accumulation_batch_size),
     },
     "validation_metric": "+EM",
-    "num_serialized_models_to_keep": 1,
-    "should_log_learning_rate": true,
+    //"num_serialized_models_to_keep": 1,
+    //"should_log_learning_rate": true,
     "num_gradient_accumulation_steps": gradient_accumulation_batch_size,
     // "grad_clipping": 1.0,
     "num_epochs": num_epochs,

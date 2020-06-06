@@ -85,7 +85,7 @@ class TransformerMCQAModel(Model):
                 metadata: List[Dict[str, Any]] = None) -> torch.Tensor:
 
         self._debug -= 1
-        input_ids = question['tokens']
+        input_ids = question['tokens']['token_ids']
 
         batch_size = input_ids.size(0)
         num_choices = input_ids.size(1)

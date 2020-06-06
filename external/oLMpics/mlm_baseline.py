@@ -14,7 +14,7 @@ from allennlp.data import Vocabulary
 from allennlp.models.model import Model
 from allennlp.modules import FeedForward, MatrixAttention
 from allennlp.modules.matrix_attention import DotProductMatrixAttention
-from allennlp.modules import Seq2SeqEncoder, SimilarityFunction, TimeDistributed, TextFieldEmbedder
+from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
 from allennlp.modules.token_embedders import Embedding, ElmoTokenEmbedder
 from allennlp.nn import InitializerApplicator, RegularizerApplicator
 from allennlp.nn.util import get_text_field_mask, masked_softmax, weighted_sum, replace_masked_values
@@ -25,7 +25,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss, MSELoss
 import math
-from pytorch_transformers.modeling_bert import (BertConfig, BertEmbeddings,
+from transformers.modeling_bert import (BertConfig, BertEmbeddings,
                                                 BertLayerNorm, BertModel,
                                                 BertPreTrainedModel, gelu)
 
