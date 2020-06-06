@@ -116,7 +116,7 @@ def process_results(args):
         results_dict[field[0]] = field[1]
 
 
-    if args.predictions_file is not None:
+    if args.predictions_file is not None and args.prediction_path is not None:
         if args.eval_path is not None:
             # uploading to cloud
             command = "aws s3 cp " + args.predictions_file + " " + args.prediction_path + " --acl public-read"
@@ -128,7 +128,7 @@ def process_results(args):
 
         if 'predictions' in results_dict:
             del results_dict['predictions']
-        ElasticLogger().write_log('INFO', 'EvalResults', context_dict=results_dict)
+    ElasticLogger().write_log('INFO', 'EvalResults', context_dict=results_dict)
 
 def main():
     parse = argparse.ArgumentParser("Pre-process for DocumentQA/MultiQA model and datareader")
@@ -148,7 +148,7 @@ def main():
     parse.add_argument("--experiment", default=None, type=str)
     parse.add_argument("--full_experiments_name", default=None, type=str)
     parse.add_argument("--predictions_file", default=None, type=str)
-    parse.add_argument("--prediction_path", default="s3://aigame/predictions", type=str)
+    parse.add_argument("--prediction_path", default=None, type=str)
     parse.add_argument("--eval_path", default=None, type=str)
     parse.add_argument("--remove_serialization_dir", default=None, type=str)
     args = parse.parse_args()
