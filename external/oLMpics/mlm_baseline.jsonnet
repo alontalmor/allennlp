@@ -43,9 +43,10 @@ local cuda_device = -1;
       }
     }
    },
-  "iterator": {
-    "type": "basic",
-    "batch_size": 16
+  "data_loader": {
+      "batch_sampler": {
+          "batch_size": 16
+      }
   },
   "trainer": {
     "optimizer": {
@@ -54,7 +55,9 @@ local cuda_device = -1;
         "weight_decay" : weight_decay
     },
     "validation_metric": "+accuracy",
-    "num_serialized_models_to_keep": 0,
+    "checkpointer": {
+        "num_serialized_models_to_keep": 0,
+    },
     "num_epochs": 75,
     "grad_norm": 10.0,
     "patience": 10,
