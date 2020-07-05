@@ -170,8 +170,8 @@ class MLMBaseline(Model):
             A scalar loss to be optimised.
         """
 
-        batch_size, num_of_tokens = phrase['tokens'].shape
-        choices_ids = choices['tokens'][:,:,0].squeeze()
+        batch_size, num_of_tokens = phrase['tokens']['tokens'].shape
+        choices_ids = choices['tokens']['tokens'][:,:,0].squeeze()
         _, num_choices = choices_ids.shape
         embedded_phrase = self._text_field_embedder(phrase)
 
