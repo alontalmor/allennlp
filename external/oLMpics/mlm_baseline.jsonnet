@@ -35,19 +35,22 @@ local cuda_device = -1;
     "type": "mlm_baseline",
     "dropout": 0.3,
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
-        "embedding_dim": 50,
-        "trainable": false
+        "token_embedders": {
+          "tokens": {
+            "type": "embedding",
+            "pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
+            "embedding_dim": 50,
+            "trainable": false
+          }
+        }
       }
-    }
    },
   "data_loader": {
       "batch_sampler": {
-          "batch_size": 16
+        "type": "bucket",
+        "batch_size": batch_size
       }
-  },
+   },
   "trainer": {
     "optimizer": {
         "type": "adam",
