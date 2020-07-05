@@ -208,18 +208,4 @@ class TransformerMaskedLMModel(Model):
             'EM': self._accuracy.get_metric(reset),
         }
 
-    @classmethod
-    def _load(cls,
-              config: Params,
-              serialization_dir: str,
-              weights_file: str = None,
-              cuda_device: int = -1,
-              **kwargs) -> 'Model':
-        model_params = config.get('model')
-        model_params.update({"on_load": True})
-        config.update({'model': model_params})
-        return super()._load(config=config,
-                             serialization_dir=serialization_dir,
-                             weights_file=weights_file,
-                             cuda_device=cuda_device,
-                             **kwargs)
+
