@@ -1010,6 +1010,7 @@ class GradientDescentTrainer(Trainer):
         grad_norm: float = None,
         grad_clipping: float = None,
         distributed: bool = None,
+        save_best_model: bool = True,
         world_size: int = 1,
         num_gradient_accumulation_steps: int = 1,
         opt_level: Optional[str] = None,
@@ -1092,7 +1093,7 @@ class GradientDescentTrainer(Trainer):
             distributed=distributed,
             local_rank=local_rank,
             world_size=world_size,
-            #save_best_model = save_best_model,
+            save_best_model = save_best_model,
             num_gradient_accumulation_steps=num_gradient_accumulation_steps,
             opt_level=opt_level,
         )
