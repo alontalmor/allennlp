@@ -35,12 +35,14 @@ local cuda_device = -1;
     "type": "esim_baseline",
     "dropout": 0.3,
     "text_field_embedder": {
-      "tokens": {
-        "type": "embedding",
-        //"pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
-        "embedding_dim": 50,
-        "trainable": true
-      }
+       "token_embedders": {
+          "tokens": {
+            "type": "embedding",
+            //"pretrained_file": "https://s3-us-west-2.amazonaws.com/allennlp/datasets/glove/glove.6B.50d.txt.gz",
+            "embedding_dim": 50,
+            "trainable": true
+          }
+       }
     },
     "encoder": {
       "type": "lstm",
@@ -49,7 +51,9 @@ local cuda_device = -1;
       "num_layers": 1,
       "bidirectional": true
     },
-    "similarity_function": {"type": "dot_product"},
+    "matrix_attention": {
+        "type": "dot_product"
+    },
     "projection_feedforward": {
       "input_dim": 2400,
       "hidden_dims": 300,
@@ -76,31 +80,42 @@ local cuda_device = -1;
       "hidden_dims": 1,
       "activations": "linear"
     },
-     "initializer": [
-      [".*linear_layers.*weight", {"type": "xavier_uniform"}],
-      [".*linear_layers.*bias", {"type": "constant", "val": 0}],
+     "initializer": {"regexes": [
+         [".*linear_layers.*weight", {"type": "xavier_uniform"}],
+         [".*linear_layers.*bias", {"type": "constant", "val": 0}]
+     // [".*linear_layers.*weight", {"type": "xavier_uniform"}],
+     // [".*linear_layers.*bias", {"type": "constant", "val": 0}],
 //      [".*weight_ih.*", {"type": "xavier_uniform"}], these should get initialized already!
 //      [".*weight_hh.*", {"type": "orthogonal"}],
 //      [".*bias_ih.*", {"type": "constant", "val": 0}],
 //      [".*bias_hh.*", {"type": "constant", "val": 1}]
-     ]
+     ]}
    },
-  "iterator": {
+  "data_loader": {
+     "batch_sampler": {
+       "type": "bucket",
+       //"sorting_keys": ["premise", "num_tokens"],
+       "batch_size": batch_size
+     }
+  },
+  /*"iterator": {
     "type": "bucket",
     "sorting_keys": [["premise", "num_tokens"]],
-    "batch_size": 32
-  },
+    "batch_size": 16
+  },*/
   "trainer": {
     "optimizer": {
         "type": "adam",
         "lr": 0.0004
     },
     "validation_metric": "+accuracy",
-    "num_serialized_models_to_keep": 0,
     "num_epochs": 75,
     "grad_norm": 10.0,
     "patience": 10,
     "cuda_device": -1,
+    "checkpointer": {
+        "num_serialized_models_to_keep": 0
+    },
     "learning_rate_scheduler": {
       "type": "reduce_on_plateau",
       "factor": 0.5,

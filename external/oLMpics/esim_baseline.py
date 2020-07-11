@@ -10,100 +10,89 @@ from torch.autograd import Variable
 
 from allennlp.common import Params
 from allennlp.common.checks import check_dimensions_match
-from allennlp.data import Vocabulary
+from allennlp.data import TextFieldTensors, Vocabulary
 from allennlp.models.model import Model
-from allennlp.modules import FeedForward, MatrixAttention
-from allennlp.modules.matrix_attention import DotProductMatrixAttention
-from allennlp.modules import Seq2SeqEncoder, TimeDistributed, TextFieldEmbedder
-# SimilarityFunction
-from allennlp.modules.token_embedders import Embedding, ElmoTokenEmbedder
-from allennlp.nn import InitializerApplicator, RegularizerApplicator
-from allennlp.nn.util import get_text_field_mask, masked_softmax, weighted_sum, replace_masked_values
+from allennlp.modules import FeedForward, InputVariationalDropout
+from allennlp.modules.matrix_attention.matrix_attention import MatrixAttention
+from allennlp.modules import Seq2SeqEncoder, TextFieldEmbedder
+from allennlp.nn import InitializerApplicator
+from allennlp.nn.util import (
+    get_text_field_mask,
+    masked_softmax,
+    weighted_sum,
+    masked_max,
+    replace_masked_values
+)
 from allennlp.training.metrics import CategoricalAccuracy
 
 import logging
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-
-class VariationalDropout(torch.nn.Dropout):
-    def forward(self, input):
-        """
-        input is shape (batch_size, timesteps, embedding_dim)
-        Samples one mask of size (batch_size, embedding_dim) and applies it to every time step.
-        """
-        # ones = Variable(torch.ones(input.shape[0], input.shape[-1]))
-        ones = Variable(input.data.new(input.shape[0], input.shape[-1]).fill_(1))
-        dropout_mask = torch.nn.functional.dropout(ones, self.p, self.training, inplace=False)
-        if self.inplace:
-            input *= dropout_mask.unsqueeze(1)
-            return None
-        else:
-            return dropout_mask.unsqueeze(1) * input
-
+#
+# Copied with minor changes from https://github.com/allenai/allennlp-models/blob/master/allennlp_models/nli/esim_model.py
+# Changes: Added answer_index output field and renamed metric to "EM"
+#
 
 @Model.register("esim_baseline")
 class ESIM(Model):
     """
-    This ``Model`` implements the ESIM sequence model described in `"Enhanced LSTM for Natural Language Inference"
-    <https://www.semanticscholar.org/paper/Enhanced-LSTM-for-Natural-Language-Inference-Chen-Zhu/83e7654d545fbbaaf2328df365a781fb67b841b4>`_
+    This `Model` implements the ESIM sequence model described in [Enhanced LSTM for Natural Language Inference]
+    (https://www.semanticscholar.org/paper/Enhanced-LSTM-for-Natural-Language-Inference-Chen-Zhu/83e7654d545fbbaaf2328df365a781fb67b841b4)
     by Chen et al., 2017.
 
-    Parameters
-    ----------
-    vocab : ``Vocabulary``
-    text_field_embedder : ``TextFieldEmbedder``
-        Used to embed the ``premise`` and ``hypothesis`` ``TextFields`` we get as input to the
+    Registered as a `Model` with name "esim".
+
+    # Parameters
+
+    vocab : `Vocabulary`
+    text_field_embedder : `TextFieldEmbedder`
+        Used to embed the `premise` and `hypothesis` `TextFields` we get as input to the
         model.
-    attend_feedforward : ``FeedForward``
-        This feedforward network is applied to the encoded sentence representations before the
-        similarity matrix is computed between words in the premise and words in the hypothesis.
-    similarity_function : ``SimilarityFunction``
-        This is the similarity function used when computing the similarity matrix between words in
-        the premise and words in the hypothesis.
-    compare_feedforward : ``FeedForward``
-        This feedforward network is applied to the aligned premise and hypothesis representations,
-        individually.
-    aggregate_feedforward : ``FeedForward``
-        This final feedforward network is applied to the concatenated, summed result of the
-        ``compare_feedforward`` network, and its output is used as the entailment class logits.
-    premise_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
-        After embedding the premise, we can optionally apply an encoder.  If this is ``None``, we
-        will do nothing.
-    hypothesis_encoder : ``Seq2SeqEncoder``, optional (default=``None``)
-        After embedding the hypothesis, we can optionally apply an encoder.  If this is ``None``,
-        we will use the ``premise_encoder`` for the encoding (doing nothing if ``premise_encoder``
-        is also ``None``).
-    initializer : ``InitializerApplicator``, optional (default=``InitializerApplicator()``)
+    encoder : `Seq2SeqEncoder`
+        Used to encode the premise and hypothesis.
+    matrix_attention : `MatrixAttention`
+        This is the attention function used when computing the similarity matrix between encoded
+        words in the premise and words in the hypothesis.
+    projection_feedforward : `FeedForward`
+        The feedforward network used to project down the encoded and enhanced premise and hypothesis.
+    inference_encoder : `Seq2SeqEncoder`
+        Used to encode the projected premise and hypothesis for prediction.
+    output_feedforward : `FeedForward`
+        Used to prepare the concatenated premise and hypothesis for prediction.
+    output_logit : `FeedForward`
+        This feedforward network computes the output logits.
+    dropout : `float`, optional (default=0.5)
+        Dropout percentage to use.
+    initializer : `InitializerApplicator`, optional (default=`InitializerApplicator()`)
         Used to initialize the model parameters.
-    regularizer : ``RegularizerApplicator``, optional (default=``None``)
-        If provided, will be used to calculate the regularization penalty during training.
     """
 
     def __init__(self, vocab: Vocabulary,
                  text_field_embedder: TextFieldEmbedder,
                  encoder: Seq2SeqEncoder,
-                 #similarity_function: SimilarityFunction,
+            matrix_attention: MatrixAttention,
                  projection_feedforward: FeedForward,
                  inference_encoder: Seq2SeqEncoder,
                  output_feedforward: FeedForward,
                  output_logit: FeedForward,
                  initializer: InitializerApplicator = InitializerApplicator(),
                  dropout: float = 0.5,
-                 regularizer: Optional[RegularizerApplicator] = None) -> None:
-        super().__init__(vocab, regularizer)
+            **kwargs,
+    ) -> None:
+        super().__init__(vocab, **kwargs)
 
         self._text_field_embedder = text_field_embedder
         self._encoder = encoder
 
-        self._matrix_attention = DotProductMatrixAttention()
+        self._matrix_attention = matrix_attention
         self._projection_feedforward = projection_feedforward
 
         self._inference_encoder = inference_encoder
 
         if dropout:
             self.dropout = torch.nn.Dropout(dropout)
-            self.rnn_input_dropout = VariationalDropout(dropout)
+            self.rnn_input_dropout = InputVariationalDropout(dropout)
         else:
             self.dropout = None
             self.rnn_input_dropout = None
@@ -113,62 +102,75 @@ class ESIM(Model):
 
         self._num_labels = vocab.get_vocab_size(namespace="labels")
 
-        check_dimensions_match(text_field_embedder.get_output_dim(), encoder.get_input_dim(),
-                               "text field embedding dim", "encoder input dim")
-        check_dimensions_match(encoder.get_output_dim() * 4, projection_feedforward.get_input_dim(),
-                               "encoder output dim", "projection feedforward input")
-        check_dimensions_match(projection_feedforward.get_output_dim(), inference_encoder.get_input_dim(),
-                               "proj feedforward output dim", "inference lstm input dim")
+        check_dimensions_match(
+            text_field_embedder.get_output_dim(),
+            encoder.get_input_dim(),
+            "text field embedding dim",
+            "encoder input dim",
+        )
+        check_dimensions_match(
+            encoder.get_output_dim() * 4,
+            projection_feedforward.get_input_dim(),
+            "encoder output dim",
+            "projection feedforward input",
+        )
+        check_dimensions_match(
+            projection_feedforward.get_output_dim(),
+            inference_encoder.get_input_dim(),
+            "proj feedforward output dim",
+            "inference lstm input dim",
+        )
 
         self._accuracy = CategoricalAccuracy()
         self._loss = torch.nn.CrossEntropyLoss()
+        self._debug = 2
 
         initializer(self)
 
     def forward(self,  # type: ignore
                 premise: Dict[str, torch.LongTensor],
-                hypothesis0: Dict[str, torch.LongTensor],
-                hypothesis1: Dict[str, torch.LongTensor],
-                hypothesis2: Dict[str, torch.LongTensor] = None,
-                label: torch.IntTensor = None) -> Dict[str, torch.Tensor]:
-        # pylint: disable=arguments-differ
-        """
-        Parameters
-        ----------
-        premise : Dict[str, torch.LongTensor]
-            From a ``TextField``
-        hypothesis : Dict[str, torch.LongTensor]
-            From a ``TextField``
-        label : torch.IntTensor, optional (default = None)
-            From a ``LabelField``
+            hypothesis0: Dict[str, torch.LongTensor],
+            hypothesis1: Dict[str, torch.LongTensor],
+            hypothesis2: Dict[str, torch.LongTensor] = None,
+            label: torch.IntTensor = None,
+    ) -> Dict[str, torch.Tensor]:
 
-        Returns
-        -------
+        """
+        # Parameters
+
+        premise : TextFieldTensors
+            From a `TextField`
+        hypothesis : TextFieldTensors
+            From a `TextField`
+        label : torch.IntTensor, optional (default = None)
+            From a `LabelField`
+        metadata : `List[Dict[str, Any]]`, optional, (default = None)
+            Metadata containing the original tokenization of the premise and
+            hypothesis with 'premise_tokens' and 'hypothesis_tokens' keys respectively.
+
+        # Returns
+
         An output dictionary consisting of:
 
         label_logits : torch.FloatTensor
-            A tensor of shape ``(batch_size, num_labels)`` representing unnormalised log
+            A tensor of shape `(batch_size, num_labels)` representing unnormalised log
             probabilities of the entailment label.
         label_probs : torch.FloatTensor
-            A tensor of shape ``(batch_size, num_labels)`` representing probabilities of the
+            A tensor of shape `(batch_size, num_labels)` representing probabilities of the
             entailment label.
         loss : torch.FloatTensor, optional
             A scalar loss to be optimised.
         """
         hyps = [h for h in [hypothesis0, hypothesis1, hypothesis2] if h is not None]
-        if isinstance(self._text_field_embedder, ElmoTokenEmbedder):
-            self._text_field_embedder._elmo._elmo_lstm._elmo_lstm.reset_states()
 
         embedded_premise = self._text_field_embedder(premise)
 
         embedded_hypotheses = []
         for hypothesis in hyps:
-            if isinstance(self._text_field_embedder, ElmoTokenEmbedder):
-                self._text_field_embedder._elmo._elmo_lstm._elmo_lstm.reset_states()
             embedded_hypotheses.append(self._text_field_embedder(hypothesis))
 
-        premise_mask = get_text_field_mask(premise).float()
-        hypothesis_masks = [get_text_field_mask(hypothesis).float() for hypothesis in hyps]
+        premise_mask = get_text_field_mask(premise)
+        hypothesis_masks = [get_text_field_mask(hypothesis) for hypothesis in hyps]
         # apply dropout for LSTM
         if self.rnn_input_dropout:
             embedded_premise = self.rnn_input_dropout(embedded_premise)
@@ -254,10 +256,11 @@ class ESIM(Model):
         label_probs = torch.nn.functional.softmax(label_logits, dim=-1)
 
         output_dict = {"label_logits": label_logits, "label_probs": label_probs}
+        output_dict['answer_index'] = label_logits.argmax(1)
 
         if label is not None:
             loss = self._loss(label_logits, label.long().view(-1))
-            self._accuracy(label_logits, label.squeeze(-1))
+            self._accuracy(label_logits, label)
             output_dict["loss"] = loss
 
         return output_dict
